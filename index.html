@@ -437,7 +437,7 @@
         <label>Kiểu bữa ăn</label>
         <select id="fMealType">
           <option value="buacom">Bữa cơm 3 món</option>
-          <option value="buatomonuoc">Bữa 1 tô (phở/bún/nui...)</option>
+          <option value="buatomonuoc">Bữa 1 món (phở/bún/nui...)</option>
         </select>
       </div>
       <div class="form-row">
@@ -580,7 +580,7 @@ import { generateHouseholdCode, isValidHouseholdCode, serializeHouseholdData, pa
     {id:'m20', category:'man', mealType:'buacom', chay:true, region:null, name:'Nấm kho tiêu chay', time:20, ingredients:['nấm đông cô','nấm rơm','tiêu','nước tương'], steps:['Nấm đông cô, nấm rơm rửa sạch, để ráo, cắt miếng vừa ăn.','Phi thơm hành, cho nấm vào xào săn.','Thêm nước tương, chút đường, đổ nước xâm xấp.','Kho lửa nhỏ 10-12 phút đến khi nước sánh lại, rắc tiêu, tắt bếp.']},
     {id:'m21', category:'man', mealType:'buacom', chay:true, region:null, name:'Tàu hũ ky chiên giòn sốt me chay', time:20, ingredients:['tàu hũ ky','me','đường','nước tương'], steps:['Tàu hũ ky chiên vàng giòn, vớt ra để ráo dầu.','Dầm me lấy nước cốt, lọc bỏ hạt.','Đun nước me với đường, nước tương đến khi sánh lại làm sốt.','Rưới sốt me lên tàu hũ ky, dùng ngay khi còn giòn.']},
 
-    // Bữa 1 tô (Kiểu bữa ăn riêng — xem ADR-0002)
+    // Bữa 1 món (Kiểu bữa ăn riêng — xem ADR-0002)
     {id:'t1', category:null, mealType:'buatomonuoc', chay:false, region:'bac', name:'Phở bò', time:60, ingredients:['bánh phở','thịt bò','xương bò','hành tây','gừng','quế hồi'], steps:['Xương bò chần qua nước sôi, rửa sạch.','Nướng gừng và hành tây cho thơm, cho vào nồi ninh cùng xương 3-4 tiếng, vớt bọt thường xuyên.','Cho quế, hồi, thảo quả vào túi vải, thả vào nồi nước dùng ninh cùng 30 phút cuối.','Nêm nước mắm, muối cho vừa vị, lọc lại nước dùng cho trong.','Trụng bánh phở, xếp thịt bò thái mỏng lên trên, chan nước dùng đang sôi, rắc hành ngò.']},
     {id:'t2', category:null, mealType:'buatomonuoc', chay:false, region:'bac', name:'Phở gà', time:45, ingredients:['bánh phở','gà','hành tây','gừng'], steps:['Gà làm sạch, luộc chín cùng gừng và hành tây nướng thơm, vớt bọt.','Vớt gà ra, xé hoặc thái miếng vừa ăn.','Nêm nước luộc gà với nước mắm, muối cho vừa vị làm nước dùng.','Trụng bánh phở, xếp thịt gà lên trên, chan nước dùng nóng, rắc hành ngò.']},
     {id:'t3', category:null, mealType:'buatomonuoc', chay:false, region:'trung', name:'Bún bò Huế', time:75, ingredients:['bún','thịt bò','giò heo','sả','mắm ruốc'], steps:['Giò heo và xương bò chần qua nước sôi, rửa sạch.','Ninh xương và giò heo với sả đập dập trong 2-3 tiếng, vớt bọt.','Pha mắm ruốc với nước, lọc cặn, cho vào nồi nước dùng.','Nêm nước mắm, đường, ớt sa tế cho vừa vị đậm đà đặc trưng.','Trụng bún, xếp thịt bò, giò heo lên trên, chan nước dùng, ăn kèm rau sống.']},
@@ -629,7 +629,7 @@ import { generateHouseholdCode, isValidHouseholdCode, serializeHouseholdData, pa
 
   // Backfill recipe steps + new fields (mealType/chay/region) into dishes saved by an older
   // version of the app, without touching names/ingredients the user already edited — and add
-  // brand-new seed dishes (Bữa 1 tô, món chay bổ sung...) that an older saved list doesn't have yet.
+  // brand-new seed dishes (Bữa 1 món, món chay bổ sung...) that an older saved list doesn't have yet.
   var storedSeedVer = safeGet(LS_KEYS.seedVer, 1);
   if(storedSeedVer < SEED_VERSION){
     var seedMap = {};
@@ -711,7 +711,7 @@ import { generateHouseholdCode, isValidHouseholdCode, serializeHouseholdData, pa
 
   function randomizeMonNuoc(){
     var picked = pickMonNuoc(state.dishes, { chay: state.chayFilter });
-    if(!picked){ showToast('Chưa có món Bữa 1 tô nào phù hợp'); return; }
+    if(!picked){ showToast('Chưa có món Bữa 1 món nào phù hợp'); return; }
     state.todayMenu = { dishIds: [picked.id], date: todayStr(), mealType: 'buatomonuoc' };
     state.shopChecked = {};
     safeSet(LS_KEYS.today, state.todayMenu);
@@ -724,7 +724,7 @@ import { generateHouseholdCode, isValidHouseholdCode, serializeHouseholdData, pa
     if(!state.todayMenu || state.todayMenu.mealType !== 'buatomonuoc') return;
     var currentId = state.todayMenu.dishIds[0];
     var next = pickMonNuoc(state.dishes, { chay: state.chayFilter, avoidId: currentId });
-    if(!next){ showToast('Không còn món Bữa 1 tô khác'); return; }
+    if(!next){ showToast('Không còn món Bữa 1 món khác'); return; }
     state.todayMenu.dishIds = [next.id];
     safeSet(LS_KEYS.today, state.todayMenu);
     track('reroll_dish', {category: 'buatomonuoc'});
@@ -782,7 +782,7 @@ import { generateHouseholdCode, isValidHouseholdCode, serializeHouseholdData, pa
     menuList.innerHTML = dishes.map(function(d){
       return '<div class="card dish-slot">' +
         '<div style="min-width:0">' +
-          '<span class="cat-tag">' + (d.mealType === 'buatomonuoc' ? 'Bữa 1 tô' : CAT[d.category]) + dishBadges(d) + '</span>' +
+          '<span class="cat-tag">' + (d.mealType === 'buatomonuoc' ? 'Bữa 1 món' : CAT[d.category]) + dishBadges(d) + '</span>' +
           '<div class="dish-name">' + escapeHtml(d.name) + '</div>' +
           '<div class="dish-meta">' + (d.time ? d.time + ' phút · ' : '') + d.ingredients.length + ' nguyên liệu</div>' +
           '<div class="dish-ingr">' + d.ingredients.map(escapeHtml).join(', ') + '</div>' +
@@ -874,7 +874,7 @@ import { generateHouseholdCode, isValidHouseholdCode, serializeHouseholdData, pa
   // ---- Dishes management ----
   function renderDishes(){
     var filterRow = document.getElementById('catFilter');
-    var cats = [['all','Tất cả']].concat(CAT_ORDER.map(function(c){ return [c, CAT[c]]; })).concat([['buatomonuoc','Bữa 1 tô']]);
+    var cats = [['all','Tất cả']].concat(CAT_ORDER.map(function(c){ return [c, CAT[c]]; })).concat([['buatomonuoc','Bữa 1 món']]);
     filterRow.innerHTML = cats.map(function(c){
       return '<button class="chip' + (state.catFilter===c[0]?' active':'') + '" data-cat="' + c[0] + '">' + c[1] + '</button>';
     }).join('') + '<button class="chip' + (state.mgmtChayFilter?' active':'') + '" id="btnMgmtChayFilter">Chay</button>';
@@ -893,7 +893,7 @@ import { generateHouseholdCode, isValidHouseholdCode, serializeHouseholdData, pa
     });
     if(!list.length){ listCard.innerHTML = '<div class="empty">Không có món nào.</div>'; return; }
     listCard.innerHTML = list.map(function(d){
-      var catLabel = d.mealType === 'buatomonuoc' ? 'Bữa 1 tô' : CAT[d.category];
+      var catLabel = d.mealType === 'buatomonuoc' ? 'Bữa 1 món' : CAT[d.category];
       return '<div class="dish-row">' +
         '<div class="info">' +
           '<div class="dname">' + escapeHtml(d.name) + dishBadges(d) + '</div>' +

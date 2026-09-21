@@ -123,7 +123,7 @@ Xem thuật ngữ đầy đủ tại [CONTEXT.md](CONTEXT.md), quyết định k
 
 **✅ Phase 1 — đã triển khai (2026-09-21):**
 - **Chay**: thêm tag `chay` lên món ăn (món có sẵn phù hợp + món chay mới), thêm bộ lọc "ăn chay hôm nay" áp dụng cho cả 3 Nhóm món — không phải nhóm thứ 4. Áp dụng được cho từng ngày riêng lẻ trong Kế hoạch tuần (Phase 3), không chỉ "Hôm nay". Tab "Món ăn" có thêm chip lọc "Chay" (ngang hàng Tất cả/Xào.../Canh/Món mặn) để duyệt toàn bộ món chay bất cứ lúc nào.
-- **Bữa 1 tô**: Kiểu bữa ăn mới song song "Bữa cơm 3 món" — món nước ăn độc lập (phở/bún/nui...), kích hoạt bằng nút riêng chủ động (không random tự động). Xem [ADR-0002](docs/adr/0002-meal-type-vs-category.md).
+- **Bữa 1 món**: Kiểu bữa ăn mới song song "Bữa cơm 3 món" — món nước ăn độc lập (phở/bún/nui...), kích hoạt bằng nút riêng chủ động (không random tự động). Xem [ADR-0002](docs/adr/0002-meal-type-vs-category.md).
 - **Vùng miền**: tag Bắc/Trung/Nam trên món ăn, chỉ hiển thị thông tin, chưa dùng để lọc.
 
 **Phase 2 — Backend lưu trữ tập trung theo Hộ gia đình:**
@@ -133,7 +133,7 @@ Xem thuật ngữ đầy đủ tại [CONTEXT.md](CONTEXT.md), quyết định k
 **Phase 3 — Lịch thực đơn theo tuần:**
 - Lên kế hoạch trước cho cả 7 ngày (Bữa cơm 3 món), ép không trùng món tuyệt đối trong tuần (đủ dữ liệu vì 18 món/nhóm > 7 ngày cần).
 - Gộp danh sách đi chợ cho cả tuần (giá trị chính của việc lên kế hoạch trước).
-- Sửa được từng ngày riêng lẻ trong tuần — kể cả đổi kiểu bữa ăn của ngày đó sang "Bữa 1 tô", hoặc bật lọc "chay" riêng cho ngày đó.
+- Sửa được từng ngày riêng lẻ trong tuần — kể cả đổi kiểu bữa ăn của ngày đó sang "Bữa 1 món", hoặc bật lọc "chay" riêng cho ngày đó.
 - Hợp nhất với "Hôm nay"/"Lịch sử": tab Hôm nay tự lấy đúng món trong kế hoạch tuần của ngày đó, "Đánh dấu đã nấu" hoạt động y hệt cơ chế hiện tại.
 
 **Đã cân nhắc và loại bỏ khỏi roadmap** (không đủ giá trị so với chi phí xây dựng thêm thao tác nhập liệu):

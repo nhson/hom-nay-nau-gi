@@ -22,7 +22,7 @@ _Avoid_: Danh mục, Category (khi nói tiếng Anh xen kẽ) — dùng thống 
 **Kiểu bữa ăn** *(meal type)*:
 Cấu trúc tổng thể của 1 bữa, quyết định số món và cách chọn:
 - **Bữa cơm 3 món**: mặc định hiện tại — 1 món/Nhóm món (xào + canh + mặn).
-- **Bữa 1 tô**: món nước ăn độc lập (phở, bún, nui...) — thay thế hoàn toàn Bữa cơm 3 món hôm đó, chỉ 1 món duy nhất, không có canh/xào/mặn đi kèm.
+- **Bữa 1 món**: món nước ăn độc lập (phở, bún, nui...) — thay thế hoàn toàn Bữa cơm 3 món hôm đó, chỉ 1 món duy nhất, không có canh/xào/mặn đi kèm.
 _Avoid_: nhét món nước vào Nhóm món "Canh" — đã cân nhắc và loại bỏ, xem [ADR-0002](docs/adr/0002-meal-type-vs-category.md).
 
 **Chay**:
