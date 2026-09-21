@@ -867,11 +867,7 @@ import { generateHouseholdCode, isValidHouseholdCode, serializeHouseholdData, pa
     var chips = [
       '<button class="chip' + (state.chayFilter ? ' active' : '') + '" id="btnToggleChay">' + (state.chayFilter ? '✓ ' : '') + 'Món chay</button>'
     ];
-    if(isMonNuoc){
-      chips.push('<button class="chip active" id="btnToggleMealType">🍜 Đang nấu 1 món — bấm để quay lại cơm</button>');
-    } else {
-      chips.push('<button class="chip" id="btnToggleMealType">🍜 Nấu 1 món</button>');
-    }
+    chips.push('<button class="chip' + (isMonNuoc ? ' active' : '') + '" id="btnToggleMealType" title="' + (isMonNuoc ? 'Bấm để quay lại Bữa cơm 3 món' : '') + '">🍜 Nấu 1 món</button>');
     document.getElementById('mealControls').innerHTML = chips.join('');
   }
 
