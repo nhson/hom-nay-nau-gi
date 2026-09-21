@@ -116,10 +116,26 @@ hom-nay-nau-gi/
 - Nguyên liệu chỉ liệt kê tên, chưa có định lượng (vd. "200g thịt ba chỉ").
 - Chưa có tính năng lọc theo số người ăn, ngân sách, hoặc nguyên liệu có sẵn trong tủ lạnh.
 
-## 9. Hướng phát triển tiếp theo (đề xuất, chưa triển khai)
+## 9. Roadmap tiếp theo (đã grill với `/mattpocock-skills:grill-with-docs`, 2026-09-21 — chưa triển khai)
 
-- Thêm định lượng nguyên liệu theo khẩu phần.
-- Đồng bộ nhiều thiết bị (cần backend nhẹ, vd. Supabase/Firebase).
-- Lịch thực đơn theo tuần, tự tránh trùng trong tuần.
-- Gợi ý theo nguyên liệu có sẵn.
+Xem thuật ngữ đầy đủ tại [CONTEXT.md](CONTEXT.md), quyết định kiến trúc tại [docs/adr/](docs/adr/).
+
+**Phase 1 — làm sớm nhất (không phụ thuộc kỹ thuật vào 2 phase sau):**
+- **Chay**: thêm tag `chay` lên món ăn (món có sẵn phù hợp + món chay mới), thêm bộ lọc "ăn chay hôm nay" áp dụng cho cả 3 Nhóm món — không phải nhóm thứ 4. Áp dụng được cho từng ngày riêng lẻ trong Kế hoạch tuần (Phase 3), không chỉ "Hôm nay". Tab "Món ăn" có thêm chip lọc "Chay" (ngang hàng Tất cả/Xào.../Canh/Món mặn) để duyệt toàn bộ món chay bất cứ lúc nào.
+- **Bữa 1 tô**: Kiểu bữa ăn mới song song "Bữa cơm 3 món" — món nước ăn độc lập (phở/bún/nui...), kích hoạt bằng nút riêng chủ động (không random tự động). Xem [ADR-0002](docs/adr/0002-meal-type-vs-category.md).
+- **Vùng miền**: tag Bắc/Trung/Nam trên món ăn, chỉ hiển thị thông tin, chưa dùng để lọc.
+
+**Phase 2 — Backend lưu trữ tập trung theo Hộ gia đình:**
+- Không có tài khoản cá nhân — 1 hộ gia đình = 1 bản ghi, truy cập qua link/mã không đoán được (`/h/<mã>`).
+- Không đồng bộ real-time giữa các phiên, không xử lý xung đột — đọc khi mở app, ghi đè khi có thay đổi. Xem [ADR-0001](docs/adr/0001-centralized-storage-no-session-sync.md).
+
+**Phase 3 — Lịch thực đơn theo tuần:**
+- Lên kế hoạch trước cho cả 7 ngày (Bữa cơm 3 món), ép không trùng món tuyệt đối trong tuần (đủ dữ liệu vì 18 món/nhóm > 7 ngày cần).
+- Gộp danh sách đi chợ cho cả tuần (giá trị chính của việc lên kế hoạch trước).
+- Sửa được từng ngày riêng lẻ trong tuần — kể cả đổi kiểu bữa ăn của ngày đó sang "Bữa 1 tô", hoặc bật lọc "chay" riêng cho ngày đó.
+- Hợp nhất với "Hôm nay"/"Lịch sử": tab Hôm nay tự lấy đúng món trong kế hoạch tuần của ngày đó, "Đánh dấu đã nấu" hoạt động y hệt cơ chế hiện tại.
+
+**Đã cân nhắc và loại bỏ khỏi roadmap** (không đủ giá trị so với chi phí xây dựng thêm thao tác nhập liệu):
+- Định lượng nguyên liệu theo khẩu phần.
+- Gợi ý món theo nguyên liệu có sẵn trong tủ lạnh (tự nhập thủ công).
 - Đánh giá món sau khi nấu để ưu tiên gợi ý.
