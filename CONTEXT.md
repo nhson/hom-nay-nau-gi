@@ -26,7 +26,7 @@ Cấu trúc tổng thể của 1 bữa, quyết định số món và cách ch�
 _Avoid_: nhét món nước vào Nhóm món "Canh" — đã cân nhắc và loại bỏ, xem [ADR-0002](docs/adr/0002-meal-type-vs-category.md).
 
 **Chay**:
-Thuộc tính (tag) gắn trên món ăn, không phải Nhóm món hay Kiểu bữa ăn riêng. Dùng làm bộ lọc: khi bật "ăn chay", cả 3 Nhóm món trong Bữa cơm 3 món đều chỉ random trong các món có tag `chay`.
+Thuộc tính (tag) gắn trên món ăn, không phải Nhóm món hay Kiểu bữa ăn riêng. Dùng làm bộ lọc: khi bật "ăn chay", cả 3 Nhóm món trong Bữa cơm 3 món đều chỉ random trong các món có tag `chay`. Món có tag `chay:true` **không** dùng tỏi trong `ingredients`/`steps` — dùng hành boa-rô (leek) thay thế khi món cần vị tương tự.
 
 **Vùng miền**:
 Thuộc tính (tag) gắn trên món ăn — Bắc / Trung / Nam. Hiện tại **chỉ hiển thị thông tin**, không dùng để lọc/random (có thể nâng cấp thành bộ lọc sau).
