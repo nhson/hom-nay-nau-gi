@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Trợ lý thực đơn gia đình: random mỗi ngày 3 món (xào/luộc/salad, canh, món mặn), kèm hướng dẫn nấu từng bước, tự tổng hợp danh sách đi chợ, lưu thực đơn yêu thích.">
+<link rel="icon" href="data:,">
+<title>Hôm Nay Nấu Gì</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg:#FBF7EE;
+    --surface:#FFFFFF;
+    --surface-2:#F4EEE0;
+    --ink:#241F18;
+    --ink-dim:#6B6152;
+    --jade:#2F5D50;
+    --jade-ink:#FFFFFF;
+    --turmeric:#D98A22;
+    --turmeric-ink:#241F18;
+    --chili:#B23A22;
+    --line:#E7DECB;
+    --shadow: 0 1px 2px rgba(36,31,24,.06), 0 8px 24px -12px rgba(36,31,24,.18);
+    --radius: 16px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#181D17;
+      --surface:#212720;
+      --surface-2:#262C24;
+      --ink:#F1ECDD;
+      --ink-dim:#A39C89;
+      --jade:#7CAE9B;
+      --jade-ink:#12211C;
+      --turmeric:#E9A94E;
+      --turmeric-ink:#20160A;
+      --chili:#E08066;
+      --line:#333A30;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#181D17;
+    --surface:#212720;
+    --surface-2:#262C24;
+    --ink:#F1ECDD;
+    --ink-dim:#A39C89;
+    --jade:#7CAE9B;
+    --jade-ink:#12211C;
+    --turmeric:#E9A94E;
+    --turmeric-ink:#20160A;
+    --chili:#E08066;
+    --line:#333A30;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .shell{
+    max-width:640px;
+    margin:0 auto;
+    min-height:100%;
+    padding:0 18px 100px;
+  }
+  h1,h2,h3{
+    font-family:'Fraunces', Georgia, serif;
+    font-weight:600;
+    margin:0;
+    text-wrap:balance;
+  }
+  header.top{
+    position:sticky;
+    top:env(safe-area-inset-top,0px);
+    background:var(--bg);
+    padding-top:calc(env(safe-area-inset-top,0px) + 22px);
+    z-index:10;
+  }
+  .brand{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .brand h1{ font-size:26px; letter-spacing:-.01em; }
+  .brand .mark{ color:var(--turmeric); }
+  .today-date{
+    font-size:13px;
+    color:var(--ink-dim);
+    margin-top:2px;
+    text-transform:capitalize;
+  }
+  nav.tabs{
+    display:flex;
+    gap:4px;
+    margin-top:18px;
+    padding:4px;
+    background:var(--surface-2);
+    border-radius:999px;
+  }
+  nav.tabs button{
+    flex:1;
+    border:none;
+    background:transparent;
+    padding:9px 6px;
+    border-radius:999px;
+    font:inherit;
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--ink-dim);
+    cursor:pointer;
+  }
+  nav.tabs button.active{
+    background:var(--jade);
+    color:var(--jade-ink);
+  }
+  main{ padding-top:18px; }
+  section{ display:none; }
+  section.active{ display:block; }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+  }
+
+  /* ---- Today view ---- */
+  .hero-actions{
+    display:flex;
+    gap:10px;
+    margin-bottom:16px;
+  }
+  button.btn{
+    font:inherit;
+    font-weight:600;
+    font-size:14px;
+    border-radius:12px;
+    border:1px solid transparent;
+    padding:11px 16px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+  }
+  .btn-primary{ background:var(--turmeric); color:var(--turmeric-ink); flex:1; justify-content:center; }
+  .btn-ghost{ background:var(--surface); border-color:var(--line); color:var(--ink); }
+  .btn-ghost:hover{ background:var(--surface-2); }
+  .btn-text{ background:transparent; border:none; color:var(--jade); padding:6px 0; font-weight:600; font-size:13.5px; }
+  .btn-danger{ color:var(--chili); }
+
+  .menu-list{ display:flex; flex-direction:column; gap:12px; margin-bottom:18px; }
+  .dish-slot{
+    padding:16px;
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+  }
+  .dish-slot .cat-tag{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--jade);
+    display:block;
+    margin-bottom:4px;
+  }
+  .dish-slot .dish-name{ font-size:19px; }
+  .dish-slot .dish-meta{
+    font-size:12.5px;
+    color:var(--ink-dim);
+    margin-top:4px;
+  }
+  .dish-slot .dish-ingr{
+    font-size:13px;
+    color:var(--ink-dim);
+    margin-top:6px;
+    line-height:1.5;
+  }
+  details.recipe{ margin-top:10px; }
+  details.recipe summary{
+    cursor:pointer;
+    font-size:13px;
+    font-weight:700;
+    color:var(--jade);
+    list-style:none;
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+  }
+  details.recipe summary::-webkit-details-marker{ display:none; }
+  details.recipe summary::before{
+    content:'▸';
+    font-size:10px;
+    display:inline-block;
+    transition:transform .15s ease;
+  }
+  details.recipe[open] summary::before{ transform:rotate(90deg); }
+  details.recipe ol{
+    margin:10px 0 0;
+    padding-left:20px;
+    font-size:13.5px;
+    line-height:1.6;
+    color:var(--ink);
+  }
+  details.recipe ol li{ margin-bottom:7px; }
+  details.recipe ol li::marker{ color:var(--turmeric); font-weight:700; }
+  details.recipe ol li:last-child{ margin-bottom:0; }
+  .slot-actions{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-left:auto;
+  }
+  .icon-btn{
+    width:34px; height:34px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--surface);
+    color:var(--ink-dim);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    font-size:16px;
+    flex-shrink:0;
+  }
+  .icon-btn:hover{ background:var(--surface-2); color:var(--ink); }
+
+  .cooked-banner{
+    display:flex; align-items:center; gap:8px;
+    font-size:13.5px; color:var(--jade); font-weight:600;
+    padding:10px 14px; margin-bottom:16px;
+    background:var(--surface-2); border-radius:12px;
+  }
+
+  .section-title{
+    font-size:14px; font-weight:700; color:var(--ink-dim);
+    text-transform:uppercase; letter-spacing:.04em;
+    margin:24px 0 10px;
+  }
+
+  .shopping-card{ padding:14px 16px; }
+  .shopping-item{
+    display:flex; align-items:center; gap:10px;
+    padding:8px 0;
+    border-bottom:1px solid var(--line);
+    font-size:14.5px;
+  }
+  .shopping-item:last-child{ border-bottom:none; }
+  .shopping-item input{ width:18px; height:18px; accent-color:var(--jade); flex-shrink:0; }
+  .shopping-item.checked span{ text-decoration:line-through; color:var(--ink-dim); }
+  .shopping-item .from{ margin-left:auto; font-size:11.5px; color:var(--ink-dim); }
+
+  .history-strip{ display:flex; flex-direction:column; gap:8px; }
+  .history-row{
+    display:flex; align-items:baseline; gap:10px;
+    padding:10px 14px;
+    font-size:13.5px;
+  }
+  .history-row .h-date{ font-weight:700; color:var(--jade); width:58px; flex-shrink:0; }
+  .history-row .h-dishes{ color:var(--ink-dim); }
+  .empty{
+    text-align:center; color:var(--ink-dim); font-size:14px;
+    padding:26px 14px;
+  }
+
+  /* ---- Dishes manage view ---- */
+  .filter-row{ display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+  .chip{
+    border:1px solid var(--line);
+    background:var(--surface);
+    color:var(--ink-dim);
+    padding:6px 12px;
+    border-radius:999px;
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .chip.active{ background:var(--jade); border-color:var(--jade); color:var(--jade-ink); }
+
+  .dish-row{
+    display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+    padding:12px 14px;
+    border-bottom:1px solid var(--line);
+  }
+  .dish-row:last-child{ border-bottom:none; }
+  .dish-row .info{ min-width:0; flex:1; }
+  .dish-row .dname{ font-size:15px; font-weight:600; }
+  .dish-row .dmeta{ font-size:12px; color:var(--ink-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dish-row .actions{ margin-left:auto; display:flex; gap:6px; flex-shrink:0; }
+  .dish-row details.recipe{ flex-basis:100%; margin-top:2px; }
+
+  form.dish-form{ padding:16px; display:flex; flex-direction:column; gap:10px; }
+  form.dish-form label{ font-size:12.5px; font-weight:700; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.03em; }
+  form.dish-form input, form.dish-form select, form.dish-form textarea{
+    font:inherit; font-size:14.5px;
+    padding:10px 12px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--bg);
+    color:var(--ink);
+    width:100%;
+  }
+  form.dish-form textarea{ resize:vertical; min-height:52px; }
+  .form-row{ display:flex; gap:10px; }
+  .form-row > div{ flex:1; }
+  .form-actions{ display:flex; gap:10px; margin-top:4px; }
+
+  /* ---- Favorites view ---- */
+  .fav-card{ padding:14px 16px; margin-bottom:12px; }
+  .fav-card .fav-name{ font-size:17px; font-family:'Fraunces',serif; font-weight:600; }
+  .fav-card .fav-dishes{ font-size:13px; color:var(--ink-dim); margin:6px 0 10px; line-height:1.5; }
+  .fav-card .fav-actions{ display:flex; gap:8px; }
+
+  /* ---- modal ---- */
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(20,17,12,.45);
+    display:flex; align-items:flex-end; justify-content:center;
+    z-index:50;
+  }
+  .modal-backdrop[hidden]{ display:none; }
+  .modal{
+    background:var(--surface);
+    width:100%; max-width:640px;
+    border-radius:20px 20px 0 0;
+    padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));
+    box-shadow:var(--shadow);
+  }
+  .modal h3{ font-size:18px; margin-bottom:12px; }
+  .modal input{
+    font:inherit; font-size:15px;
+    padding:11px 12px; width:100%;
+    border-radius:10px; border:1px solid var(--line);
+    background:var(--bg); color:var(--ink);
+    margin-bottom:12px;
+  }
+
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+    background:var(--ink); color:var(--bg);
+    padding:10px 18px; border-radius:999px;
+    font-size:13.5px; font-weight:600;
+    box-shadow:var(--shadow);
+    z-index:60;
+    opacity:0; pointer-events:none;
+    transition:opacity .25s ease;
+  }
+  .toast.show{ opacity:1; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="top">
+    <div class="brand">
+      <h1>Hôm nay <span class="mark">nấu gì?</span></h1>
+    </div>
+    <div class="today-date" id="todayDate"></div>
+    <nav class="tabs">
+      <button data-tab="today" class="active">Hôm nay</button>
+      <button data-tab="dishes">Món ăn</button>
+      <button data-tab="favorites">Yêu thích</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="tab-today" class="active">
+      <div class="hero-actions">
+        <button class="btn btn-primary" id="btnRandomAll">🎲 Random thực đơn</button>
+        <button class="btn btn-ghost" id="btnSaveFav">☆ Lưu</button>
+      </div>
+      <div id="cookedBanner"></div>
+      <div class="menu-list" id="menuList"></div>
+      <div class="hero-actions">
+        <button class="btn btn-ghost" style="flex:1;justify-content:center" id="btnMarkCooked">✓ Đã nấu hôm nay</button>
+      </div>
+
+      <div class="section-title">Danh sách đi chợ</div>
+      <div class="card shopping-card" id="shoppingCard"></div>
+
+      <div class="section-title">7 ngày gần đây</div>
+      <div class="card" id="historyCard"></div>
+    </section>
+
+    <section id="tab-dishes">
+      <div class="filter-row" id="catFilter"></div>
+      <div class="hero-actions">
+        <button class="btn btn-primary" id="btnAddDish">+ Thêm món mới</button>
+      </div>
+      <div class="card" id="dishListCard"></div>
+    </section>
+
+    <section id="tab-favorites">
+      <div id="favList"></div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="dishModalBackdrop" hidden>
+  <div class="modal">
+    <h3 id="dishFormTitle">Thêm món mới</h3>
+    <form class="dish-form" id="dishForm">
+      <div>
+        <label>Tên món</label>
+        <input type="text" id="fName" required placeholder="VD: Canh chua cá lóc">
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Nhóm món</label>
+          <select id="fCategory">
+            <option value="xao">Xào / Luộc / Salad</option>
+            <option value="canh">Canh</option>
+            <option value="man">Món mặn</option>
+          </select>
+        </div>
+        <div>
+          <label>Thời gian (phút)</label>
+          <input type="number" id="fTime" min="1" placeholder="20">
+        </div>
+      </div>
+      <div>
+        <label>Nguyên liệu (cách nhau bằng dấu phẩy)</label>
+        <textarea id="fIngredients" placeholder="cá lóc, cà chua, me, đậu bắp"></textarea>
+      </div>
+      <div>
+        <label>Hướng dẫn nấu (mỗi bước 1 dòng)</label>
+        <textarea id="fSteps" rows="5" placeholder="Cá làm sạch, cắt khúc&#10;Đun sôi nước, dầm me lấy nước chua&#10;Cho cá vào nấu chín..."></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" id="fCancel" style="flex:1;justify-content:center">Huỷ</button>
+        <button type="submit" class="btn btn-primary">Lưu món</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="favModalBackdrop" hidden>
+  <div class="modal">
+    <h3>Lưu thực đơn yêu thích</h3>
+    <input type="text" id="favNameInput" placeholder="VD: Mâm cơm cuối tuần">
+    <div class="form-actions">
+      <button type="button" class="btn btn-ghost" id="favCancel" style="flex:1;justify-content:center">Huỷ</button>
+      <button type="button" class="btn btn-primary" id="favConfirm">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var CAT = { xao: 'Xào / Luộc / Salad', canh: 'Canh', man: 'Món mặn' };
+  var CAT_ORDER = ['xao','canh','man'];
+
+  var SEED_DISHES = [
+    // Xào / Luộc / Salad
+    {id:'x1', category:'xao', name:'Rau muống xào tỏi', time:10, ingredients:['rau muống','tỏi','dầu ăn','nước mắm'], steps:['Rau muống nhặt bỏ lá già, rửa sạch, để ráo.','Tỏi băm nhỏ.','Phi thơm tỏi với dầu ăn trên lửa lớn.','Cho rau muống vào đảo nhanh tay 2-3 phút cho rau chín tới, còn giòn.','Nêm nước mắm, đảo đều rồi tắt bếp.']},
+    {id:'x2', category:'xao', name:'Rau lang xào tỏi', time:10, ingredients:['rau lang','tỏi','dầu ăn'], steps:['Rau lang nhặt lá non, rửa sạch, để ráo.','Tỏi băm nhỏ, phi thơm với dầu ăn.','Cho rau lang vào xào lửa lớn 2-3 phút đến khi rau mềm.','Nêm gia vị vừa ăn, tắt bếp.']},
+    {id:'x3', category:'xao', name:'Bông cải xanh xào thịt bò', time:15, ingredients:['bông cải xanh','thịt bò','tỏi','dầu hào'], steps:['Thịt bò thái mỏng, ướp tỏi băm, dầu hào, tiêu 10 phút.','Bông cải xanh cắt miếng vừa ăn, chần sơ qua nước sôi.','Phi thơm tỏi, xào thịt bò lửa lớn đến khi tái thì gắp ra.','Cho bông cải vào xào nhanh, nêm dầu hào.','Cho thịt bò lại vào đảo đều, tắt bếp.']},
+    {id:'x4', category:'xao', name:'Đậu rồng xào tỏi', time:10, ingredients:['đậu rồng','tỏi','dầu ăn'], steps:['Đậu rồng rửa sạch, cắt xéo miếng vừa ăn.','Phi thơm tỏi băm với dầu ăn.','Cho đậu rồng vào xào lửa lớn 3-4 phút.','Nêm gia vị vừa ăn, tắt bếp khi đậu còn giòn.']},
+    {id:'x5', category:'xao', name:'Giá xào hẹ', time:8, ingredients:['giá đỗ','hẹ','dầu ăn'], steps:['Giá đỗ rửa sạch, để ráo. Hẹ cắt khúc 3cm.','Phi thơm dầu ăn.','Cho giá vào xào lửa lớn 1 phút.','Cho hẹ vào đảo nhanh thêm 1 phút, nêm gia vị, tắt bếp ngay để giá không ra nước.']},
+    {id:'x6', category:'xao', name:'Su su xào tỏi', time:10, ingredients:['su su','tỏi','dầu ăn'], steps:['Su su gọt vỏ, thái lát mỏng.','Phi thơm tỏi băm với dầu ăn.','Cho su su vào xào lửa lớn 4-5 phút đến khi chín tới.','Nêm gia vị vừa ăn, tắt bếp.']},
+    {id:'x7', category:'xao', name:'Cải thìa xào nấm', time:12, ingredients:['cải thìa','nấm','tỏi','dầu hào'], steps:['Cải thìa rửa sạch, bổ đôi. Nấm rửa sạch, cắt miếng vừa ăn.','Phi thơm tỏi băm với dầu ăn.','Cho nấm vào xào trước 2 phút.','Cho cải thìa vào xào chung lửa lớn 2-3 phút.','Nêm dầu hào, đảo đều, tắt bếp.']},
+    {id:'x8', category:'xao', name:'Dưa chua xào thịt heo quay', time:15, ingredients:['dưa cải chua','thịt heo quay','hành lá'], steps:['Dưa cải chua rửa sơ cho bớt chua, vắt ráo, cắt khúc.','Thịt heo quay cắt miếng vừa ăn.','Phi thơm hành, cho dưa chua vào xào trước 2-3 phút.','Cho thịt heo quay vào đảo đều, nêm nếm lại cho vừa ăn.','Tắt bếp, rắc hành lá.']},
+    {id:'x9', category:'xao', name:'Rau muống luộc', time:8, ingredients:['rau muống','muối'], steps:['Rau muống nhặt sạch, rửa kỹ.','Đun sôi nước với chút muối (và dầu ăn để rau xanh hơn).','Cho rau vào luộc 2-3 phút đến khi rau chín tới.','Vớt ra, có thể ngâm qua nước lạnh để rau giòn xanh.']},
+    {id:'x10', category:'xao', name:'Bắp cải luộc', time:10, ingredients:['bắp cải','muối'], steps:['Bắp cải cắt miếng vừa ăn, rửa sạch.','Đun sôi nước với chút muối.','Cho bắp cải vào luộc 3-4 phút đến khi vừa chín mềm.','Vớt ra để ráo, chấm nước mắm hoặc kho quẹt.']},
+    {id:'x11', category:'xao', name:'Su su luộc', time:10, ingredients:['su su','muối'], steps:['Su su gọt vỏ, cắt miếng vừa ăn.','Đun sôi nước với chút muối.','Cho su su vào luộc 5-6 phút đến khi chín mềm.','Vớt ra để ráo.']},
+    {id:'x12', category:'xao', name:'Đậu bắp luộc', time:8, ingredients:['đậu bắp','muối'], steps:['Đậu bắp rửa sạch, cắt bỏ cuống.','Đun sôi nước với chút muối.','Cho đậu bắp vào luộc 3-4 phút, không luộc quá lâu để tránh nhớt nhiều.','Vớt ra ngâm nước lạnh để giữ màu xanh giòn.']},
+    {id:'x13', category:'xao', name:'Bông cải trắng luộc', time:8, ingredients:['bông cải trắng','muối'], steps:['Bông cải trắng cắt miếng vừa ăn, rửa sạch.','Đun sôi nước với chút muối.','Cho bông cải vào luộc 4-5 phút đến khi chín tới.','Vớt ra để ráo.']},
+    {id:'x14', category:'xao', name:'Salad bắp cải trộn mè', time:15, ingredients:['bắp cải','cà rốt','mè rang','giấm','đường'], steps:['Bắp cải, cà rốt thái sợi mỏng.','Trộn giấm, đường, chút muối cho tan làm sốt.','Trộn bắp cải, cà rốt với sốt, để 10 phút cho ngấm.','Rắc mè rang lên trên trước khi ăn.']},
+    {id:'x15', category:'xao', name:'Salad dưa leo cà chua', time:10, ingredients:['dưa leo','cà chua','hành tây','giấm'], steps:['Dưa leo, cà chua thái miếng vừa ăn. Hành tây thái mỏng, ngâm nước đá cho bớt hăng.','Trộn đều dưa leo, cà chua, hành tây.','Rưới giấm, chút đường, muối, dầu ăn lên trên.','Trộn đều, dùng ngay để rau giữ độ giòn.']},
+    {id:'x16', category:'xao', name:'Nộm đu đủ', time:20, ingredients:['đu đủ xanh','cà rốt','đậu phộng','rau thơm'], steps:['Đu đủ xanh bào sợi, ngâm nước muối loãng rồi vắt ráo.','Cà rốt bào sợi. Đậu phộng rang giã dập.','Pha nước trộn gỏi: nước mắm, đường, chanh, tỏi ớt băm.','Trộn đu đủ, cà rốt với nước trộn, để thấm 5-10 phút.','Rắc đậu phộng và rau thơm lên trên.']},
+    {id:'x17', category:'xao', name:'Salad rau củ trộn dầu giấm', time:10, ingredients:['xà lách','cà chua','dưa leo','dầu ô liu','giấm'], steps:['Xà lách rửa sạch, để ráo, xé miếng vừa ăn.','Cà chua, dưa leo thái miếng.','Pha sốt dầu giấm theo tỷ lệ 3 dầu ô liu : 1 giấm, thêm muối, tiêu, chút đường.','Trộn đều rau củ với sốt ngay trước khi ăn để rau không bị mềm.']},
+    {id:'x18', category:'xao', name:'Gỏi ngó sen tôm thịt', time:25, ingredients:['ngó sen','tôm','thịt ba chỉ','rau thơm'], steps:['Ngó sen bào mỏng, ngâm nước chanh muối loãng cho trắng giòn.','Tôm luộc chín, bóc vỏ. Thịt ba chỉ luộc chín, thái mỏng.','Pha nước trộn gỏi chua ngọt: nước mắm, đường, chanh, tỏi ớt.','Trộn ngó sen, tôm, thịt với nước trộn.','Rắc rau thơm, đậu phộng rang lên trên trước khi dùng.']},
+
+    // Canh
+    {id:'c1', category:'canh', name:'Canh chua cá lóc', time:30, ingredients:['cá lóc','me','cà chua','dứa','đậu bắp','giá'], steps:['Cá lóc làm sạch, cắt khúc, ướp chút muối.','Đun sôi nước, dầm me lấy nước chua.','Cho cá vào nấu chín, vớt bọt.','Cho cà chua, dứa, đậu bắp vào nấu thêm 3-4 phút.','Nêm nước mắm, đường, cho giá và rau thơm vào, tắt bếp.']},
+    {id:'c2', category:'canh', name:'Canh cua mồng tơi', time:20, ingredients:['cua đồng','mồng tơi','mướp'], steps:['Cua đồng giã hoặc xay, lọc lấy nước, bỏ xác.','Đun nước cua trên lửa vừa, khuấy nhẹ đến khi riêu cua nổi lên.','Cho mồng tơi, mướp thái miếng vào nấu chín.','Nêm gia vị vừa ăn, tắt bếp.']},
+    {id:'c3', category:'canh', name:'Canh tôm nấu bầu', time:15, ingredients:['tôm','bầu'], steps:['Tôm bóc vỏ, băm nhỏ hoặc để nguyên, ướp chút gia vị.','Bầu gọt vỏ, thái miếng vừa ăn.','Phi thơm hành, xào sơ tôm cho thơm.','Đổ nước vào đun sôi, cho bầu vào nấu 3-4 phút đến chín.','Nêm gia vị, rắc hành lá, tắt bếp.']},
+    {id:'c4', category:'canh', name:'Canh rau dền nấu tôm', time:15, ingredients:['rau dền','tôm'], steps:['Tôm bóc vỏ, băm nhỏ, ướp sơ.','Rau dền nhặt rửa sạch.','Phi thơm tôm với chút hành, đổ nước vào đun sôi.','Cho rau dền vào nấu 2-3 phút đến chín mềm.','Nêm gia vị, tắt bếp.']},
+    {id:'c5', category:'canh', name:'Canh khổ qua nhồi thịt', time:30, ingredients:['khổ qua','thịt bằm','nấm mèo'], steps:['Khổ qua bổ đôi, bỏ ruột, rửa sạch.','Thịt bằm trộn với nấm mèo băm, hành, gia vị làm nhân.','Nhồi nhân vào khổ qua.','Đun sôi nước, thả khổ qua nhồi vào nấu 15-20 phút đến chín mềm.','Nêm gia vị vừa ăn, rắc hành ngò.']},
+    {id:'c6', category:'canh', name:'Canh cà chua trứng', time:10, ingredients:['cà chua','trứng','hành lá'], steps:['Cà chua thái múi cau. Trứng đánh tan.','Phi thơm hành, xào cà chua cho ra màu và mềm.','Đổ nước vào đun sôi.','Từ từ rót trứng vào theo vòng tròn, khuấy nhẹ tạo vân trứng.','Nêm gia vị, rắc hành lá, tắt bếp.']},
+    {id:'c7', category:'canh', name:'Canh bí đỏ nấu tôm', time:20, ingredients:['bí đỏ','tôm'], steps:['Tôm bóc vỏ, băm nhỏ. Bí đỏ gọt vỏ, cắt miếng vừa ăn.','Phi thơm tôm với hành.','Đổ nước vào đun sôi, cho bí đỏ vào nấu 10-12 phút đến mềm.','Nêm gia vị, tắt bếp.']},
+    {id:'c8', category:'canh', name:'Canh rong biển đậu hũ', time:15, ingredients:['rong biển','đậu hũ','thịt bằm'], steps:['Rong biển khô ngâm nở, rửa sạch, cắt khúc.','Đậu hũ cắt miếng vuông. Thịt bằm ướp sơ.','Đun nước sôi, cho thịt bằm vào nấu chín, vớt bọt.','Cho đậu hũ và rong biển vào nấu thêm 3-4 phút.','Nêm gia vị, tắt bếp.']},
+    {id:'c9', category:'canh', name:'Canh cải xanh nấu gừng', time:15, ingredients:['cải xanh','gừng','thịt bằm'], steps:['Cải xanh rửa sạch, cắt khúc. Gừng thái sợi.','Thịt bằm ướp sơ với chút gia vị.','Đun nước sôi, cho thịt bằm vào nấu chín, vớt bọt.','Cho gừng và cải xanh vào nấu 2-3 phút.','Nêm gia vị vừa ăn, tắt bếp.']},
+    {id:'c10', category:'canh', name:'Canh sườn bí đao', time:30, ingredients:['sườn non','bí đao'], steps:['Sườn non chặt miếng, chần qua nước sôi cho sạch, rửa lại.','Ninh sườn với nước khoảng 25-30 phút cho mềm, vớt bọt.','Bí đao gọt vỏ, cắt miếng vừa ăn.','Cho bí đao vào nấu thêm 5-7 phút đến chín.','Nêm gia vị, rắc hành ngò, tắt bếp.']},
+    {id:'c11', category:'canh', name:'Canh chua tôm dứa', time:25, ingredients:['tôm','dứa','cà chua','me'], steps:['Tôm bóc vỏ, ướp sơ. Dứa, cà chua cắt miếng.','Đun sôi nước, dầm me lấy nước chua.','Cho cà chua, dứa vào nấu 3-4 phút.','Cho tôm vào nấu chín.','Nêm mắm, đường vừa ăn, rắc rau thơm, tắt bếp.']},
+    {id:'c12', category:'canh', name:'Canh mướp nấu ngao', time:20, ingredients:['mướp','ngao'], steps:['Ngao ngâm nước vo gạo cho nhả cát, rửa sạch.','Luộc ngao đến khi mở miệng, lọc lấy nước trong, gỡ thịt ngao.','Mướp gọt vỏ, thái miếng vừa ăn.','Đun nước ngao sôi lại, cho mướp vào nấu 2-3 phút.','Cho thịt ngao vào, nêm gia vị, tắt bếp.']},
+    {id:'c13', category:'canh', name:'Canh rau ngót thịt bằm', time:15, ingredients:['rau ngót','thịt bằm'], steps:['Rau ngót tuốt lá, rửa sạch.','Thịt bằm ướp sơ với gia vị.','Phi thơm hành, xào săn thịt bằm.','Đổ nước vào đun sôi, cho rau ngót vào nấu 2-3 phút.','Nêm gia vị, tắt bếp.']},
+    {id:'c14', category:'canh', name:'Canh khoai mỡ nấu tôm', time:20, ingredients:['khoai mỡ','tôm'], steps:['Khoai mỡ gọt vỏ, cắt miếng, rửa sạch.','Tôm bóc vỏ, băm nhỏ, ướp sơ.','Phi thơm tôm với hành, đổ nước vào đun sôi.','Cho khoai mỡ vào nấu 8-10 phút đến khi mềm sánh.','Nêm gia vị, tắt bếp.']},
+    {id:'c15', category:'canh', name:'Canh súp lơ nấu xương', time:30, ingredients:['súp lơ','xương heo','cà rốt'], steps:['Xương heo chần qua nước sôi, rửa sạch.','Ninh xương với nước khoảng 25-30 phút, vớt bọt.','Súp lơ, cà rốt cắt miếng vừa ăn.','Cho cà rốt vào nấu trước 5 phút, sau đó cho súp lơ vào nấu thêm 4-5 phút.','Nêm gia vị, tắt bếp.']},
+    {id:'c16', category:'canh', name:'Canh cải bó xôi nấu thịt', time:15, ingredients:['cải bó xôi','thịt bằm'], steps:['Cải bó xôi rửa sạch, cắt khúc.','Thịt bằm ướp sơ với gia vị.','Đun nước sôi, cho thịt bằm vào nấu chín, vớt bọt.','Cho cải bó xôi vào nấu 1-2 phút đến chín tới.','Nêm gia vị, tắt bếp.']},
+    {id:'c17', category:'canh', name:'Canh chua bông so đũa', time:25, ingredients:['bông so đũa','cá','me'], steps:['Bông so đũa nhặt rửa sạch. Cá làm sạch, cắt khúc.','Đun sôi nước, dầm me lấy nước chua.','Cho cá vào nấu chín, vớt bọt.','Cho bông so đũa vào nấu 2 phút.','Nêm mắm đường vừa ăn, tắt bếp.']},
+    {id:'c18', category:'canh', name:'Canh bầu nấu tép', time:15, ingredients:['bầu','tép'], steps:['Tép rửa sạch, để ráo. Bầu gọt vỏ, thái miếng.','Phi thơm hành, xào sơ tép cho thơm.','Đổ nước vào đun sôi, cho bầu vào nấu 4-5 phút đến chín.','Nêm gia vị, rắc hành lá, tắt bếp.']},
+
+    // Món mặn
+    {id:'m1', category:'man', name:'Thịt kho tàu', time:60, ingredients:['thịt ba chỉ','trứng','nước dừa'], steps:['Thịt ba chỉ cắt miếng vuông, chần qua nước sôi cho sạch.','Ướp thịt với nước mắm, đường, hành tỏi băm khoảng 20 phút.','Thắng nước màu (đường + nước), cho thịt vào đảo săn.','Đổ nước dừa xâm xấp, đun sôi rồi hạ lửa nhỏ, kho khoảng 45 phút.','Cho trứng luộc bóc vỏ vào, kho thêm 10-15 phút đến khi thịt mềm, nước sánh.']},
+    {id:'m2', category:'man', name:'Cá kho tộ', time:40, ingredients:['cá lóc','nước mắm','đường','tiêu'], steps:['Cá làm sạch, cắt khúc, ướp muối tiêu, nước mắm khoảng 15 phút.','Thắng nước màu bằng đường trong nồi đất (tộ).','Xếp cá vào, thêm nước mắm, đường, tiêu.','Kho lửa nhỏ 25-30 phút, thỉnh thoảng rưới nước kho lên cá.','Rắc tiêu, hành lá khi nước sánh lại, tắt bếp.']},
+    {id:'m3', category:'man', name:'Gà kho gừng', time:30, ingredients:['gà','gừng','nước mắm'], steps:['Gà chặt miếng vừa ăn, ướp với gừng thái sợi, nước mắm, tiêu 15 phút.','Phi thơm hành, cho gà vào xào săn.','Đổ nước xâm xấp, đun sôi rồi hạ lửa nhỏ.','Kho 20-25 phút đến khi gà mềm, nước sánh lại.','Nêm lại cho vừa ăn, rắc hành lá.']},
+    {id:'m4', category:'man', name:'Thịt kho tiêu', time:30, ingredients:['thịt ba chỉ','tiêu','nước mắm'], steps:['Thịt ba chỉ cắt miếng, ướp với nước mắm, tiêu, hành tỏi băm 20 phút.','Phi thơm tỏi, cho thịt vào xào săn.','Đổ nước xâm xấp, đun sôi rồi hạ lửa nhỏ.','Kho 25-30 phút đến khi thịt mềm, nước sánh.','Rắc thêm tiêu xay trước khi tắt bếp.']},
+    {id:'m5', category:'man', name:'Tôm rim mặn ngọt', time:15, ingredients:['tôm','nước mắm','đường'], steps:['Tôm rửa sạch, để nguyên vỏ hoặc bóc vỏ chừa đuôi.','Ướp tôm với nước mắm, đường 10 phút.','Phi thơm tỏi, cho tôm vào rim lửa vừa.','Rim đến khi nước sánh lại, bám đều vào tôm, tắt bếp.']},
+    {id:'m6', category:'man', name:'Đậu hũ sốt cà chua', time:15, ingredients:['đậu hũ','cà chua','hành lá'], steps:['Đậu hũ cắt miếng vuông, chiên vàng các mặt, vớt ra.','Cà chua băm nhỏ hoặc xay.','Phi thơm hành, xào cà chua cho nhuyễn và ra màu.','Cho đậu hũ vào, thêm chút nước, nêm gia vị, đun sôi nhẹ 5 phút.','Rắc hành lá, tắt bếp.']},
+    {id:'m7', category:'man', name:'Thịt rang cháy cạnh', time:20, ingredients:['thịt ba chỉ','nước mắm','đường'], steps:['Thịt ba chỉ cắt miếng vừa ăn, ướp nước mắm, tiêu 15 phút.','Cho thịt vào chảo không dầu (mỡ tự ra), rang lửa vừa.','Rang đến khi thịt săn vàng, cháy cạnh nhẹ.','Nêm thêm chút đường, nước mắm cho đậm, đảo đều đến khi khô nước.']},
+    {id:'m8', category:'man', name:'Cá chiên sốt cà', time:20, ingredients:['cá','cà chua','hành'], steps:['Cá làm sạch, khía nhẹ, ướp muối tiêu, chiên vàng hai mặt, vớt ra.','Cà chua, hành băm nhỏ.','Phi thơm hành, xào cà chua nhuyễn.','Cho cá vào, thêm chút nước, rim nhỏ lửa 5-7 phút cho ngấm sốt.','Nêm gia vị vừa ăn, tắt bếp.']},
+    {id:'m9', category:'man', name:'Sườn xào chua ngọt', time:30, ingredients:['sườn non','cà chua','dứa'], steps:['Sườn non chặt miếng, chần sơ, rửa sạch, ướp gia vị 15 phút.','Chiên sườn vàng đều, vớt ra.','Phi thơm tỏi, cho cà chua, dứa vào xào.','Pha nước sốt chua ngọt (giấm, đường, nước mắm, tương cà), đổ vào đun sôi.','Cho sườn vào đảo đều đến khi nước sốt sánh bám đều, tắt bếp.']},
+    {id:'m10', category:'man', name:'Trứng chiên thịt bằm', time:10, ingredients:['trứng','thịt bằm','hành lá'], steps:['Thịt bằm ướp sơ với chút gia vị.','Đánh tan trứng, trộn thịt bằm và hành lá thái nhỏ vào.','Nêm gia vị vừa ăn.','Đổ hỗn hợp vào chảo dầu nóng, chiên vàng đều hai mặt lửa vừa.']},
+    {id:'m11', category:'man', name:'Gà chiên nước mắm', time:25, ingredients:['gà','nước mắm','tỏi'], steps:['Gà chặt miếng vừa ăn, ướp chút muối, chiên vàng giòn, vớt ra.','Pha nước mắm với đường theo tỷ lệ 1:1, đun cho sánh kẹo lại.','Phi thơm tỏi băm, đổ nước mắm đường vào.','Cho gà vào đảo đều đến khi nước mắm bám đều, tắt bếp.']},
+    {id:'m12', category:'man', name:'Mực xào sa tế', time:15, ingredients:['mực','sa tế','hành tây'], steps:['Mực làm sạch, cắt khoanh hoặc khía hoa, ướp sơ.','Hành tây cắt múi cau.','Phi thơm tỏi với sa tế.','Cho mực vào xào lửa lớn nhanh tay 2-3 phút.','Cho hành tây vào đảo đều, nêm gia vị, tắt bếp ngay để mực không dai.']},
+    {id:'m13', category:'man', name:'Thịt bò xào hành tây', time:15, ingredients:['thịt bò','hành tây','tỏi'], steps:['Thịt bò thái mỏng, ướp tỏi băm, dầu hào, tiêu 10 phút.','Hành tây cắt múi cau.','Xào thịt bò lửa lớn nhanh tay đến khi tái thì gắp ra.','Xào sơ hành tây 1 phút, cho thịt bò vào đảo đều.','Nêm gia vị, tắt bếp ngay để thịt không dai.']},
+    {id:'m14', category:'man', name:'Chả trứng hấp', time:20, ingredients:['trứng','thịt bằm','mộc nhĩ'], steps:['Thịt bằm trộn với trứng, mộc nhĩ băm nhỏ, hành lá, gia vị.','Đánh đều hỗn hợp cho mịn.','Đổ vào khuôn hoặc chén sâu lòng.','Hấp cách thủy lửa vừa 20-25 phút đến khi chín, xăm tăm không dính là được.']},
+    {id:'m15', category:'man', name:'Cá basa kho nghệ', time:25, ingredients:['cá basa','nghệ','nước mắm'], steps:['Cá basa cắt khúc, ướp với nghệ tươi giã hoặc bột nghệ, nước mắm 20 phút.','Phi thơm hành tỏi, cho cá vào áp chảo sơ hai mặt.','Thêm chút nước, đun sôi rồi hạ lửa nhỏ.','Kho 15-20 phút đến khi nước sánh lại, nêm vừa ăn.']},
+    {id:'m16', category:'man', name:'Tôm rang thịt', time:20, ingredients:['tôm','thịt ba chỉ','hành'], steps:['Thịt ba chỉ cắt hạt lựu, tôm bóc vỏ.','Phi thơm hành, xào săn thịt ba chỉ trước.','Cho tôm vào xào chung đến khi tôm chín đỏ.','Nêm nước mắm, đường, rang đến khi hơi khô, đậm vị.']},
+    {id:'m17', category:'man', name:'Thịt heo quay', time:60, ingredients:['thịt ba chỉ','ngũ vị hương'], steps:['Thịt ba chỉ luộc sơ, để ráo, xăm da cho đều.','Ướp ngũ vị hương, muối vào phần thịt (tránh dính da), để da khô ráo hoàn toàn.','Nướng hoặc quay lửa vừa cho chín thịt trước, sau đó tăng nhiệt để da phồng giòn.','Quay đến khi da vàng giòn đều, để nguội bớt rồi chặt miếng.']},
+    {id:'m18', category:'man', name:'Đậu hũ nhồi thịt sốt cà', time:25, ingredients:['đậu hũ','thịt bằm','cà chua'], steps:['Đậu hũ cắt miếng, khoét giữa nhẹ. Thịt bằm trộn gia vị làm nhân.','Nhồi thịt vào đậu hũ, chiên sơ mặt có nhân cho săn.','Cà chua băm nhuyễn, phi thơm hành rồi xào cà chua.','Cho đậu hũ vào, thêm chút nước, rim nhỏ lửa 10 phút đến khi thịt chín và sốt sánh.','Nêm gia vị, rắc hành lá, tắt bếp.']}
+  ];
+
+  var LS_KEYS = { dishes:'hnng_dishes_v1', history:'hnng_history_v1', favorites:'hnng_favorites_v1', today:'hnng_todaymenu_v1', shop:'hnng_shopcheck_v1', seedVer:'hnng_seedver_v1' };
+  var SEED_VERSION = 2; // bump when SEED_DISHES content (e.g. steps) changes, to backfill saved dishes
+
+  function safeGet(key, fallback){
+    try{ var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+    catch(e){ return fallback; }
+  }
+  function safeSet(key, val){
+    try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){}
+  }
+
+  var state = {
+    dishes: safeGet(LS_KEYS.dishes, null) || SEED_DISHES.slice(),
+    history: safeGet(LS_KEYS.history, []),
+    favorites: safeGet(LS_KEYS.favorites, []),
+    todayMenu: safeGet(LS_KEYS.today, null), // {dishIds:[..], date}
+    shopChecked: safeGet(LS_KEYS.shop, {}),
+    activeTab: 'today',
+    catFilter: 'all',
+    editingDishId: null
+  };
+  if(!state.dishes.length){ state.dishes = SEED_DISHES.slice(); }
+
+  // Backfill recipe steps (and any other new seed fields) into dishes saved by an older
+  // version of the app, without touching names/ingredients the user already edited.
+  var storedSeedVer = safeGet(LS_KEYS.seedVer, 1);
+  if(storedSeedVer < SEED_VERSION){
+    var seedMap = {};
+    SEED_DISHES.forEach(function(sd){ seedMap[sd.id] = sd; });
+    state.dishes.forEach(function(d){
+      if((!d.steps || !d.steps.length) && seedMap[d.id] && seedMap[d.id].steps){
+        d.steps = seedMap[d.id].steps.slice();
+      }
+    });
+  }
+  safeSet(LS_KEYS.dishes, state.dishes);
+  safeSet(LS_KEYS.seedVer, SEED_VERSION);
+
+  function todayStr(){
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function fmtDate(str){
+    var p = str.split('-');
+    return p[2] + '/' + p[1];
+  }
+  function dishById(id){ return state.dishes.find(function(d){ return d.id === id; }); }
+  function uid(){ return 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function recentIds(days){
+    var cutoff = Date.now() - days*86400000;
+    var ids = {};
+    state.history.forEach(function(h){
+      if(new Date(h.date).getTime() >= cutoff){
+        h.dishIds.forEach(function(id){ ids[id] = true; });
+      }
+    });
+    return ids;
+  }
+
+  function pickRandom(category, excludeId){
+    var pool = state.dishes.filter(function(d){ return d.category === category; });
+    if(!pool.length) return null;
+    var avoid = recentIds(4);
+    var fresh = pool.filter(function(d){ return !avoid[d.id] && d.id !== excludeId; });
+    var candidates = fresh.length ? fresh : pool.filter(function(d){ return d.id !== excludeId; });
+    if(!candidates.length) candidates = pool;
+    return candidates[Math.floor(Math.random()*candidates.length)];
+  }
+
+  function randomizeAll(){
+    var picks = CAT_ORDER.map(function(cat){ return pickRandom(cat); }).filter(Boolean);
+    state.todayMenu = { dishIds: picks.map(function(d){ return d.id; }), date: todayStr() };
+    state.shopChecked = {};
+    safeSet(LS_KEYS.today, state.todayMenu);
+    safeSet(LS_KEYS.shop, state.shopChecked);
+    renderToday();
+  }
+
+  function rerollSlot(category){
+    if(!state.todayMenu) return randomizeAll();
+    var currentIds = state.todayMenu.dishIds.slice();
+    var currentInCat = currentIds.map(dishById).find(function(d){ return d && d.category === category; });
+    var next = pickRandom(category, currentInCat ? currentInCat.id : null);
+    if(!next) return;
+    var otherIds = currentIds.filter(function(id){ var d = dishById(id); return !d || d.category !== category; });
+    state.todayMenu.dishIds = otherIds.concat([next.id]);
+    safeSet(LS_KEYS.today, state.todayMenu);
+    renderToday();
+  }
+
+  function showToast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function(){ t.classList.remove('show'); }, 1800);
+  }
+
+  function markCooked(){
+    if(!state.todayMenu) return;
+    var d = todayStr();
+    var existing = state.history.find(function(h){ return h.date === d; });
+    if(existing){ existing.dishIds = state.todayMenu.dishIds; }
+    else{ state.history.unshift({date:d, dishIds: state.todayMenu.dishIds}); }
+    state.history = state.history.slice(0, 60);
+    safeSet(LS_KEYS.history, state.history);
+    renderToday();
+    showToast('Đã ghi nhận thực đơn hôm nay!');
+  }
+
+  function renderToday(){
+    document.getElementById('todayDate').textContent = new Date().toLocaleDateString('vi-VN', {weekday:'long', day:'numeric', month:'numeric', year:'numeric'});
+
+    var menuList = document.getElementById('menuList');
+    if(!state.todayMenu){
+      menuList.innerHTML = '<div class="card empty">Bấm "Random thực đơn" để bắt đầu nhé!</div>';
+      document.getElementById('shoppingCard').innerHTML = '<div class="empty">Chưa có món nào.</div>';
+      document.getElementById('cookedBanner').innerHTML = '';
+      renderHistory();
+      return;
+    }
+    var dishes = state.todayMenu.dishIds.map(dishById).filter(Boolean);
+    menuList.innerHTML = dishes.map(function(d){
+      return '<div class="card dish-slot">' +
+        '<div style="min-width:0">' +
+          '<span class="cat-tag">' + CAT[d.category] + '</span>' +
+          '<div class="dish-name">' + escapeHtml(d.name) + '</div>' +
+          '<div class="dish-meta">' + (d.time ? d.time + ' phút · ' : '') + d.ingredients.length + ' nguyên liệu</div>' +
+          '<div class="dish-ingr">' + d.ingredients.map(escapeHtml).join(', ') + '</div>' +
+          renderRecipe(d) +
+        '</div>' +
+        '<div class="slot-actions">' +
+          '<button class="icon-btn" data-reroll="' + d.category + '" title="Đổi món khác">⟲</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    var existing = state.history.find(function(h){ return h.date === todayStr(); });
+    var cooked = existing && sameSet(existing.dishIds, state.todayMenu.dishIds);
+    document.getElementById('cookedBanner').innerHTML = cooked ? '<div class="cooked-banner">✓ Đã nấu thực đơn này hôm nay</div>' : '';
+
+    renderShopping(dishes);
+    renderHistory();
+  }
+
+  function sameSet(a,b){
+    if(a.length !== b.length) return false;
+    var sa = a.slice().sort(), sb = b.slice().sort();
+    return sa.every(function(v,i){ return v === sb[i]; });
+  }
+
+  function renderShopping(dishes){
+    var card = document.getElementById('shoppingCard');
+    var items = {}; // name -> [dishNames]
+    dishes.forEach(function(d){
+      d.ingredients.forEach(function(ing){
+        var key = ing.trim().toLowerCase();
+        if(!items[key]) items[key] = { label: ing.trim(), from: [] };
+        items[key].from.push(d.name);
+      });
+    });
+    var keys = Object.keys(items);
+    if(!keys.length){ card.innerHTML = '<div class="empty">Chưa có món nào.</div>'; return; }
+    card.innerHTML = keys.map(function(k){
+      var it = items[k];
+      var checked = !!state.shopChecked[k];
+      return '<label class="shopping-item' + (checked?' checked':'') + '">' +
+        '<input type="checkbox" data-ing="' + encodeURIComponent(k) + '" ' + (checked?'checked':'') + '>' +
+        '<span>' + escapeHtml(it.label) + '</span>' +
+        '<span class="from">' + escapeHtml(it.from.join(', ')) + '</span>' +
+      '</label>';
+    }).join('');
+  }
+
+  function renderHistory(){
+    var card = document.getElementById('historyCard');
+    var recent = state.history.slice(0, 7);
+    if(!recent.length){ card.innerHTML = '<div class="empty">Chưa có lịch sử nấu ăn.</div>'; return; }
+    card.innerHTML = recent.map(function(h){
+      var names = h.dishIds.map(function(id){ var d = dishById(id); return d ? d.name : '(đã xoá)'; }).join(' · ');
+      return '<div class="history-row"><span class="h-date">' + fmtDate(h.date) + '</span><span class="h-dishes">' + escapeHtml(names) + '</span></div>';
+    }).join('');
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function renderRecipe(d){
+    if(!d.steps || !d.steps.length) return '';
+    return '<details class="recipe"><summary>Xem cách nấu (' + d.steps.length + ' bước)</summary>' +
+      '<ol>' + d.steps.map(function(s){ return '<li>' + escapeHtml(s) + '</li>'; }).join('') + '</ol>' +
+    '</details>';
+  }
+
+  // ---- Dishes management ----
+  function renderDishes(){
+    var filterRow = document.getElementById('catFilter');
+    var cats = [['all','Tất cả']].concat(CAT_ORDER.map(function(c){ return [c, CAT[c]]; }));
+    filterRow.innerHTML = cats.map(function(c){
+      return '<button class="chip' + (state.catFilter===c[0]?' active':'') + '" data-cat="' + c[0] + '">' + c[1] + '</button>';
+    }).join('');
+
+    var listCard = document.getElementById('dishListCard');
+    var list = state.dishes.filter(function(d){ return state.catFilter==='all' || d.category===state.catFilter; });
+    list.sort(function(a,b){ return a.category.localeCompare(b.category) || a.name.localeCompare(b.name,'vi'); });
+    if(!list.length){ listCard.innerHTML = '<div class="empty">Không có món nào.</div>'; return; }
+    listCard.innerHTML = list.map(function(d){
+      return '<div class="dish-row">' +
+        '<div class="info">' +
+          '<div class="dname">' + escapeHtml(d.name) + '</div>' +
+          '<div class="dmeta">' + CAT[d.category] + (d.time ? ' · ' + d.time + ' phút' : '') + ' · ' + d.ingredients.join(', ') + '</div>' +
+        '</div>' +
+        '<div class="actions">' +
+          '<button class="icon-btn" data-edit="' + d.id + '" title="Sửa">✎</button>' +
+          '<button class="icon-btn" data-delete="' + d.id + '" title="Xoá">🗑</button>' +
+        '</div>' +
+        renderRecipe(d) +
+      '</div>';
+    }).join('');
+  }
+
+  function openDishForm(dish){
+    state.editingDishId = dish ? dish.id : null;
+    document.getElementById('dishFormTitle').textContent = dish ? 'Sửa món' : 'Thêm món mới';
+    document.getElementById('fName').value = dish ? dish.name : '';
+    document.getElementById('fCategory').value = dish ? dish.category : 'xao';
+    document.getElementById('fTime').value = dish && dish.time ? dish.time : '';
+    document.getElementById('fIngredients').value = dish ? dish.ingredients.join(', ') : '';
+    document.getElementById('fSteps').value = dish && dish.steps ? dish.steps.join('\n') : '';
+    document.getElementById('dishModalBackdrop').hidden = false;
+  }
+  function closeDishForm(){ document.getElementById('dishModalBackdrop').hidden = true; }
+
+  function saveDishForm(e){
+    e.preventDefault();
+    var name = document.getElementById('fName').value.trim();
+    if(!name) return;
+    var category = document.getElementById('fCategory').value;
+    var time = parseInt(document.getElementById('fTime').value, 10) || null;
+    var ingredients = document.getElementById('fIngredients').value.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    var steps = document.getElementById('fSteps').value.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+    if(state.editingDishId){
+      var d = dishById(state.editingDishId);
+      if(d){ d.name = name; d.category = category; d.time = time; d.ingredients = ingredients; d.steps = steps; }
+    } else {
+      state.dishes.push({ id: uid(), name:name, category:category, time:time, ingredients:ingredients, steps:steps });
+    }
+    safeSet(LS_KEYS.dishes, state.dishes);
+    closeDishForm();
+    renderDishes();
+    renderToday();
+    showToast('Đã lưu món ăn!');
+  }
+
+  function deleteDish(id){
+    state.dishes = state.dishes.filter(function(d){ return d.id !== id; });
+    safeSet(LS_KEYS.dishes, state.dishes);
+    renderDishes();
+  }
+
+  // ---- Favorites ----
+  function renderFavorites(){
+    var wrap = document.getElementById('favList');
+    if(!state.favorites.length){
+      wrap.innerHTML = '<div class="card empty">Chưa có thực đơn yêu thích nào.<br>Random 1 thực đơn ngon rồi bấm "Lưu" nhé!</div>';
+      return;
+    }
+    wrap.innerHTML = state.favorites.map(function(f){
+      var names = f.dishIds.map(function(id){ var d = dishById(id); return d ? d.name : '(đã xoá)'; }).join(' · ');
+      return '<div class="card fav-card">' +
+        '<div class="fav-name">' + escapeHtml(f.name) + '</div>' +
+        '<div class="fav-dishes">' + escapeHtml(names) + '</div>' +
+        '<div class="fav-actions">' +
+          '<button class="btn btn-ghost" data-use-fav="' + f.id + '">Dùng lại</button>' +
+          '<button class="btn btn-ghost btn-danger" data-del-fav="' + f.id + '">Xoá</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ---- tabs ----
+  function setTab(tab){
+    state.activeTab = tab;
+    document.querySelectorAll('nav.tabs button').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===tab); });
+    document.querySelectorAll('main section').forEach(function(s){ s.classList.toggle('active', s.id==='tab-'+tab); });
+    if(tab==='dishes') renderDishes();
+    if(tab==='favorites') renderFavorites();
+  }
+
+  // ---- event wiring ----
+  document.querySelectorAll('nav.tabs button').forEach(function(b){
+    b.addEventListener('click', function(){ setTab(b.dataset.tab); });
+  });
+
+  document.getElementById('btnRandomAll').addEventListener('click', randomizeAll);
+  document.getElementById('btnMarkCooked').addEventListener('click', markCooked);
+  document.getElementById('btnAddDish').addEventListener('click', function(){ openDishForm(null); });
+  document.getElementById('fCancel').addEventListener('click', closeDishForm);
+  document.getElementById('dishForm').addEventListener('submit', saveDishForm);
+
+  document.getElementById('menuList').addEventListener('click', function(e){
+    var btn = e.target.closest('[data-reroll]');
+    if(btn) rerollSlot(btn.dataset.reroll);
+  });
+
+  document.getElementById('shoppingCard').addEventListener('change', function(e){
+    var input = e.target.closest('input[data-ing]');
+    if(!input) return;
+    var key = decodeURIComponent(input.dataset.ing);
+    if(input.checked) state.shopChecked[key] = true; else delete state.shopChecked[key];
+    safeSet(LS_KEYS.shop, state.shopChecked);
+    input.closest('.shopping-item').classList.toggle('checked', input.checked);
+  });
+
+  document.getElementById('catFilter').addEventListener('click', function(e){
+    var chip = e.target.closest('[data-cat]');
+    if(!chip) return;
+    state.catFilter = chip.dataset.cat;
+    renderDishes();
+  });
+
+  document.getElementById('dishListCard').addEventListener('click', function(e){
+    var editBtn = e.target.closest('[data-edit]');
+    var delBtn = e.target.closest('[data-delete]');
+    if(editBtn) openDishForm(dishById(editBtn.dataset.edit));
+    if(delBtn){
+      if(confirm('Xoá món này khỏi ngân hàng món ăn?')) deleteDish(delBtn.dataset.delete);
+    }
+  });
+
+  // Favorites: save modal
+  document.getElementById('btnSaveFav').addEventListener('click', function(){
+    if(!state.todayMenu){ showToast('Chưa có thực đơn để lưu'); return; }
+    document.getElementById('favNameInput').value = '';
+    document.getElementById('favModalBackdrop').hidden = false;
+    document.getElementById('favNameInput').focus();
+  });
+  document.getElementById('favCancel').addEventListener('click', function(){
+    document.getElementById('favModalBackdrop').hidden = true;
+  });
+  document.getElementById('favConfirm').addEventListener('click', function(){
+    var name = document.getElementById('favNameInput').value.trim() || 'Thực đơn ' + fmtDate(todayStr());
+    state.favorites.unshift({ id: uid(), name:name, dishIds: state.todayMenu.dishIds.slice(), savedAt: Date.now() });
+    safeSet(LS_KEYS.favorites, state.favorites);
+    document.getElementById('favModalBackdrop').hidden = true;
+    showToast('Đã lưu vào yêu thích!');
+  });
+
+  document.getElementById('favList').addEventListener('click', function(e){
+    var useBtn = e.target.closest('[data-use-fav]');
+    var delBtn = e.target.closest('[data-del-fav]');
+    if(useBtn){
+      var f = state.favorites.find(function(x){ return x.id === useBtn.dataset.useFav; });
+      if(f){
+        state.todayMenu = { dishIds: f.dishIds.slice(), date: todayStr() };
+        state.shopChecked = {};
+        safeSet(LS_KEYS.today, state.todayMenu);
+        safeSet(LS_KEYS.shop, state.shopChecked);
+        setTab('today');
+        renderToday();
+        showToast('Đã áp dụng thực đơn yêu thích!');
+      }
+    }
+    if(delBtn){
+      state.favorites = state.favorites.filter(function(x){ return x.id !== delBtn.dataset.delFav; });
+      safeSet(LS_KEYS.favorites, state.favorites);
+      renderFavorites();
+    }
+  });
+
+  // init
+  if(!state.todayMenu || state.todayMenu.date !== todayStr()){
+    // keep an existing same-day menu; otherwise start empty (user rerolls) but seed one for first-run delight
+    if(!state.todayMenu){ randomizeAll(); }
+  }
+  renderToday();
+})();
+</script>
+</body>
+</html>
