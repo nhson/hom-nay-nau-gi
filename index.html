@@ -383,6 +383,7 @@
       <button data-tab="today" class="active">Hôm nay</button>
       <button data-tab="dishes">Món ăn</button>
       <button data-tab="favorites">Yêu thích</button>
+      <button data-tab="household">Hộ gia đình</button>
     </nav>
   </header>
 
@@ -416,6 +417,10 @@
 
     <section id="tab-favorites">
       <div id="favList"></div>
+    </section>
+
+    <section id="tab-household">
+      <div id="householdCard"></div>
     </section>
   </main>
 </div>
@@ -496,6 +501,7 @@
 
 <script type="module">
 import { filterDishes, pickRandom, buildBuaComMenu, pickMonNuoc } from './logic.js';
+import { generateHouseholdCode, isValidHouseholdCode, serializeHouseholdData, parseHouseholdData } from './household.js';
 (function(){
   "use strict";
 
@@ -586,8 +592,11 @@ import { filterDishes, pickRandom, buildBuaComMenu, pickMonNuoc } from './logic.
     {id:'t9', category:null, mealType:'buatomonuoc', chay:false, region:null, name:'Bún chả', time:35, ingredients:['bún','thịt ba chỉ','thịt bằm','nước mắm chấm'], steps:['Thịt ba chỉ thái lát, thịt bằm viên tròn dẹt, ướp gia vị 20 phút.','Nướng thịt trên than hoa hoặc chảo đến chín vàng thơm.','Pha nước mắm chấm chua ngọt, thả thịt nướng vào.','Trụng bún, ăn kèm bún, rau sống và nước mắm chấm có thịt.']}
   ];
 
-  var LS_KEYS = { dishes:'hnng_dishes_v1', history:'hnng_history_v1', favorites:'hnng_favorites_v1', today:'hnng_todaymenu_v1', shop:'hnng_shopcheck_v1', seedVer:'hnng_seedver_v1', chayFilter:'hnng_chayfilter_v1' };
+  var LS_KEYS = { dishes:'hnng_dishes_v1', history:'hnng_history_v1', favorites:'hnng_favorites_v1', today:'hnng_todaymenu_v1', shop:'hnng_shopcheck_v1', seedVer:'hnng_seedver_v1', chayFilter:'hnng_chayfilter_v1', householdCode:'hnng_householdcode_v1' };
   var SEED_VERSION = 3; // bump when SEED_DISHES content (e.g. steps, chay/region/mealType) changes, to backfill saved dishes
+  // Keys whose value belongs to the Hộ gia đình record (ADR-0001) — writing any of these
+  // schedules a debounced push to the backend when a household is active.
+  var HOUSEHOLD_SYNCED_KEYS = [LS_KEYS.dishes, LS_KEYS.history, LS_KEYS.favorites, LS_KEYS.today, LS_KEYS.shop, LS_KEYS.chayFilter];
 
   function safeGet(key, fallback){
     try{ var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
@@ -595,6 +604,7 @@ import { filterDishes, pickRandom, buildBuaComMenu, pickMonNuoc } from './logic.
   }
   function safeSet(key, val){
     try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){}
+    if(HOUSEHOLD_SYNCED_KEYS.indexOf(key) !== -1){ scheduleHouseholdSync(); }
   }
 
   function track(name, props){
@@ -608,6 +618,8 @@ import { filterDishes, pickRandom, buildBuaComMenu, pickMonNuoc } from './logic.
     todayMenu: safeGet(LS_KEYS.today, null), // {dishIds:[..], date, mealType}
     shopChecked: safeGet(LS_KEYS.shop, {}),
     chayFilter: safeGet(LS_KEYS.chayFilter, false),
+    householdCode: safeGet(LS_KEYS.householdCode, null),
+    syncStatus: 'idle', // idle | loading | pending | saving | saved | error
     activeTab: 'today',
     catFilter: 'all',
     mgmtChayFilter: false,
@@ -981,6 +993,7 @@ import { filterDishes, pickRandom, buildBuaComMenu, pickMonNuoc } from './logic.
     document.querySelectorAll('main section').forEach(function(s){ s.classList.toggle('active', s.id==='tab-'+tab); });
     if(tab==='dishes') renderDishes();
     if(tab==='favorites') renderFavorites();
+    if(tab==='household') renderHousehold();
   }
 
   // ---- event wiring ----
@@ -1085,7 +1098,157 @@ import { filterDishes, pickRandom, buildBuaComMenu, pickMonNuoc } from './logic.
     }
   }, true);
 
+  // ---- Household sync (Phase 2 — xem docs/spec-phase2-household-backend.md, ADR-0001) ----
+  // Backend chỉ đóng vai trò lưu trữ tập trung: đọc 1 lần khi vào hộ, ghi-qua (debounce)
+  // khi có thay đổi. Không real-time, không xử lý xung đột.
+
+  var householdSyncTimer = null;
+
+  function setSyncStatus(status){
+    state.syncStatus = status;
+    if(state.activeTab === 'household') renderHousehold();
+  }
+
+  function persistLocalOnly(key, val){
+    try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){}
+  }
+
+  function scheduleHouseholdSync(){
+    if(!state.householdCode) return;
+    setSyncStatus('pending');
+    clearTimeout(householdSyncTimer);
+    householdSyncTimer = setTimeout(pushHouseholdData, 900);
+  }
+
+  function pushHouseholdData(){
+    if(!state.householdCode) return;
+    var payload = serializeHouseholdData(state);
+    setSyncStatus('saving');
+    fetch('/api/household/' + state.householdCode, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    }).then(function(r){
+      if(!r.ok) throw new Error('status ' + r.status);
+      setSyncStatus('saved');
+    }).catch(function(){
+      setSyncStatus('error');
+    });
+  }
+
+  function pullHouseholdData(code){
+    return fetch('/api/household/' + code).then(function(r){
+      if(!r.ok) throw new Error('status ' + r.status);
+      return r.json();
+    }).then(function(json){
+      if(json && json.empty) return null;
+      return parseHouseholdData(json);
+    });
+  }
+
+  function applyHouseholdData(parsed){
+    if(parsed.dishes && parsed.dishes.length){ state.dishes = parsed.dishes; persistLocalOnly(LS_KEYS.dishes, state.dishes); }
+    state.history = parsed.history; persistLocalOnly(LS_KEYS.history, state.history);
+    state.favorites = parsed.favorites; persistLocalOnly(LS_KEYS.favorites, state.favorites);
+    state.todayMenu = parsed.todayMenu; persistLocalOnly(LS_KEYS.today, state.todayMenu);
+    state.shopChecked = parsed.shopChecked; persistLocalOnly(LS_KEYS.shop, state.shopChecked);
+    state.chayFilter = parsed.chayFilter; persistLocalOnly(LS_KEYS.chayFilter, state.chayFilter);
+    renderToday();
+    renderDishes();
+    renderFavorites();
+  }
+
+  function getCodeFromUrl(){
+    var m = location.pathname.match(/^\/h\/([^\/]+)$/);
+    return m ? m[1] : null;
+  }
+
+  function createHousehold(){
+    var code = generateHouseholdCode();
+    state.householdCode = code;
+    safeSet(LS_KEYS.householdCode, code);
+    history.replaceState(null, '', '/h/' + code);
+    pushHouseholdData();
+    track('create_household');
+    renderHousehold();
+  }
+
+  function leaveHousehold(){
+    state.householdCode = null;
+    localStorage.removeItem(LS_KEYS.householdCode);
+    clearTimeout(householdSyncTimer);
+    setSyncStatus('idle');
+    history.replaceState(null, '', '/');
+    track('leave_household');
+    renderHousehold();
+  }
+
+  function initHousehold(){
+    var urlCode = getCodeFromUrl();
+    var code = urlCode || state.householdCode;
+    if(!code) return;
+    if(!isValidHouseholdCode(code)){
+      if(urlCode) showToast('Link hộ gia đình không hợp lệ');
+      return;
+    }
+    state.householdCode = code;
+    safeSet(LS_KEYS.householdCode, code);
+    if(urlCode){ history.replaceState(null, '', '/h/' + code); }
+    setSyncStatus('loading');
+    pullHouseholdData(code).then(function(parsed){
+      if(parsed){ applyHouseholdData(parsed); setSyncStatus('saved'); }
+      else { setSyncStatus('empty'); }
+    }).catch(function(){ setSyncStatus('error'); });
+  }
+
+  function renderHousehold(){
+    var card = document.getElementById('householdCard');
+    if(!state.householdCode){
+      card.innerHTML = '<div class="card" style="padding:20px;">' +
+        '<h3 style="margin-bottom:8px;">Chưa có hộ gia đình</h3>' +
+        '<div style="color:var(--ink-dim);font-size:14px;margin-bottom:16px;line-height:1.5;">Tạo 1 hộ gia đình để dùng chung dữ liệu (món ăn, thực đơn, lịch sử...) trên nhiều thiết bị — không cần tài khoản, chỉ cần chia sẻ 1 link.</div>' +
+        '<button class="btn btn-primary" id="btnCreateHousehold" style="width:100%;justify-content:center;">Tạo hộ gia đình mới</button>' +
+      '</div>';
+      return;
+    }
+    var link = location.origin + '/h/' + state.householdCode;
+    var statusLabel = {
+      loading: '⏳ Đang tải dữ liệu hộ gia đình...',
+      pending: '⏳ Có thay đổi chưa lưu...',
+      saving: '⏳ Đang lưu...',
+      saved: '✓ Đã lưu lên hộ gia đình',
+      error: '⚠️ Lỗi đồng bộ — sẽ tự thử lại ở lần thay đổi tiếp theo',
+      empty: 'Hộ gia đình này chưa có dữ liệu.',
+      idle: ''
+    }[state.syncStatus] || '';
+    card.innerHTML = '<div class="card" style="padding:20px;">' +
+      '<h3 style="margin-bottom:8px;">Hộ gia đình của bạn</h3>' +
+      '<div style="color:var(--ink-dim);font-size:14px;margin-bottom:12px;">Gửi link này cho người thân để cùng dùng chung dữ liệu:</div>' +
+      '<div style="display:flex;gap:8px;margin-bottom:12px;">' +
+        '<input type="text" readonly value="' + escapeHtml(link) + '" id="householdLinkInput" style="flex:1;min-width:0;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:13px;">' +
+        '<button class="btn btn-ghost" id="btnCopyHouseholdLink">Copy</button>' +
+      '</div>' +
+      '<div style="font-size:13px;color:var(--ink-dim);margin-bottom:16px;">' + statusLabel + '</div>' +
+      '<button class="btn btn-ghost btn-danger" id="btnLeaveHousehold" style="width:100%;justify-content:center;">Rời hộ gia đình</button>' +
+    '</div>';
+  }
+
+  document.getElementById('householdCard').addEventListener('click', function(e){
+    if(e.target.closest('#btnCreateHousehold')) createHousehold();
+    if(e.target.closest('#btnLeaveHousehold')){
+      if(confirm('Rời hộ gia đình? Dữ liệu trên hộ vẫn còn nguyên, máy này sẽ chỉ dùng dữ liệu cục bộ từ giờ.')) leaveHousehold();
+    }
+    if(e.target.closest('#btnCopyHouseholdLink')){
+      var input = document.getElementById('householdLinkInput');
+      input.select();
+      if(navigator.clipboard){
+        navigator.clipboard.writeText(input.value).then(function(){ showToast('Đã copy link!'); }).catch(function(){});
+      }
+    }
+  });
+
   // init
+  initHousehold();
   if(!state.todayMenu || state.todayMenu.date !== todayStr()){
     // keep an existing same-day menu; otherwise start empty (user rerolls) but seed one for first-run delight
     if(!state.todayMenu){ randomizeAll(); }

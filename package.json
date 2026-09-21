@@ -6,6 +6,9 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
+  "dependencies": {
+    "@vercel/blob": "^0.27.0"
+  },
   "devDependencies": {
     "vitest": "^2.1.4"
   }
