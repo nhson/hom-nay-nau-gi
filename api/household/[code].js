@@ -23,10 +23,11 @@ export default async function handler(req, res) {
       res.setHeader('Content-Type', 'application/json');
       res.status(200).send(text);
     } catch (err) {
-      if (err && (err.name === 'BlobNotFoundError' || /not_found/i.test(String(err.message || '')))) {
+      if (err && /does not exist|not_found/i.test(String(err.message || ''))) {
         res.status(200).json({ empty: true });
         return;
       }
+      console.error('household GET failed', err && err.stack || err);
       res.status(502).json({ error: 'storage_error' });
     }
     return;
@@ -53,6 +54,7 @@ export default async function handler(req, res) {
       });
       res.status(200).json({ ok: true });
     } catch (err) {
+      console.error('household PUT failed', err && err.stack || err);
       res.status(502).json({ error: 'storage_error' });
     }
     return;
