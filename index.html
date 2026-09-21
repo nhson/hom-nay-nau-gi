@@ -659,6 +659,15 @@ import { generateHouseholdCode, isValidHouseholdCode, serializeHouseholdData, pa
     return p[2] + '/' + p[1];
   }
   function dishById(id){ return state.dishes.find(function(d){ return d.id === id; }); }
+
+  // Giữ đúng thứ tự hiển thị Xào/Luộc/Salad -> Canh -> Món mặn cho Bữa cơm 3 món,
+  // bất kể món nào vừa được đổi (reroll) hay thứ tự lưu trong dishIds.
+  function sortIdsByCategoryOrder(ids){
+    var dishes = ids.map(dishById).filter(Boolean);
+    return CAT_ORDER.map(function(cat){
+      return dishes.find(function(d){ return d.category === cat; });
+    }).filter(Boolean).map(function(d){ return d.id; });
+  }
   function uid(){ return 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
   function recentIds(days){
@@ -703,7 +712,7 @@ import { generateHouseholdCode, isValidHouseholdCode, serializeHouseholdData, pa
     var next = pickRandom(pool, avoidIdsForCategory(currentInCat ? currentInCat.id : null));
     if(!next){ showToast('Không còn món khác trong nhóm này'); return; }
     var otherIds = currentIds.filter(function(id){ var d = dishById(id); return !d || d.category !== category; });
-    state.todayMenu.dishIds = otherIds.concat([next.id]);
+    state.todayMenu.dishIds = sortIdsByCategoryOrder(otherIds.concat([next.id]));
     safeSet(LS_KEYS.today, state.todayMenu);
     track('reroll_dish', {category: category});
     renderToday();
@@ -778,6 +787,13 @@ import { generateHouseholdCode, isValidHouseholdCode, serializeHouseholdData, pa
     }
     renderMealControls();
 
+    if(state.todayMenu.mealType !== 'buatomonuoc'){
+      var sortedIds = sortIdsByCategoryOrder(state.todayMenu.dishIds);
+      if(sortedIds.join(',') !== state.todayMenu.dishIds.join(',')){
+        state.todayMenu.dishIds = sortedIds;
+        safeSet(LS_KEYS.today, state.todayMenu);
+      }
+    }
     var dishes = state.todayMenu.dishIds.map(dishById).filter(Boolean);
     menuList.innerHTML = dishes.map(function(d){
       return '<div class="card dish-slot">' +
