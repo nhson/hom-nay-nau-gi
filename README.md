@@ -18,3 +18,5 @@ npx serve .
 npx vercel        # deploy bản preview
 npx vercel --prod # deploy bản production
 ```
+
+Repo này đã kết nối với Vercel Git Integration: mỗi lần push lên nhánh `main` sẽ tự động deploy production, các nhánh/PR khác sẽ có preview deploy riêng.
