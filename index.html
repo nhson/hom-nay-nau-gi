@@ -174,6 +174,17 @@
     margin-bottom:4px;
   }
   .dish-slot .dish-name{ font-size:19px; }
+  .badge-row{ display:inline-flex; gap:6px; margin-left:8px; vertical-align:middle; }
+  .badge{
+    display:inline-block;
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:.02em;
+    padding:2px 8px;
+    border-radius:999px;
+  }
+  .badge-chay{ background:var(--jade); color:var(--jade-ink); }
+  .badge-region{ background:var(--surface-2); color:var(--ink-dim); border:1px solid var(--line); }
   .dish-slot .dish-meta{
     font-size:12.5px;
     color:var(--ink-dim);
@@ -232,6 +243,12 @@
     flex-shrink:0;
   }
   .icon-btn:hover{ background:var(--surface-2); color:var(--ink); }
+
+  .meal-controls{
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    margin-bottom:16px;
+  }
+  .meal-controls .chip{ padding:7px 14px; }
 
   .cooked-banner{
     display:flex; align-items:center; gap:8px;
@@ -375,6 +392,7 @@
         <button class="btn btn-primary" id="btnRandomAll">🎲 Random thực đơn</button>
         <button class="btn btn-ghost" id="btnSaveFav">☆ Lưu</button>
       </div>
+      <div class="meal-controls" id="mealControls"></div>
       <div id="cookedBanner"></div>
       <div class="menu-list" id="menuList"></div>
       <div class="hero-actions">
@@ -410,8 +428,15 @@
         <label>Tên món</label>
         <input type="text" id="fName" required placeholder="VD: Canh chua cá lóc">
       </div>
+      <div>
+        <label>Kiểu bữa ăn</label>
+        <select id="fMealType">
+          <option value="buacom">Bữa cơm 3 món</option>
+          <option value="buatomonuoc">Bữa 1 tô (phở/bún/nui...)</option>
+        </select>
+      </div>
       <div class="form-row">
-        <div>
+        <div id="fCategoryWrap">
           <label>Nhóm món</label>
           <select id="fCategory">
             <option value="xao">Xào / Luộc / Salad</option>
@@ -422,6 +447,22 @@
         <div>
           <label>Thời gian (phút)</label>
           <input type="number" id="fTime" min="1" placeholder="20">
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Vùng miền</label>
+          <select id="fRegion">
+            <option value="">Không rõ / bỏ trống</option>
+            <option value="bac">Miền Bắc</option>
+            <option value="trung">Miền Trung</option>
+            <option value="nam">Miền Nam</option>
+          </select>
+        </div>
+        <div style="display:flex; align-items:flex-end; padding-bottom:10px;">
+          <label style="display:flex; align-items:center; gap:8px; text-transform:none; font-size:14.5px; font-weight:600; color:var(--ink);">
+            <input type="checkbox" id="fChay" style="width:18px;height:18px;accent-color:var(--jade);"> Món chay
+          </label>
         </div>
       </div>
       <div>
@@ -453,77 +494,100 @@
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
+import { filterDishes, pickRandom, buildBuaComMenu, pickMonNuoc } from './logic.js';
 (function(){
   "use strict";
 
   var CAT = { xao: 'Xào / Luộc / Salad', canh: 'Canh', man: 'Món mặn' };
   var CAT_ORDER = ['xao','canh','man'];
+  var REGION = { bac: 'Miền Bắc', trung: 'Miền Trung', nam: 'Miền Nam' };
 
   var SEED_DISHES = [
     // Xào / Luộc / Salad
-    {id:'x1', category:'xao', name:'Rau muống xào tỏi', time:10, ingredients:['rau muống','tỏi','dầu ăn','nước mắm'], steps:['Rau muống nhặt bỏ lá già, rửa sạch, để ráo.','Tỏi băm nhỏ.','Phi thơm tỏi với dầu ăn trên lửa lớn.','Cho rau muống vào đảo nhanh tay 2-3 phút cho rau chín tới, còn giòn.','Nêm nước mắm, đảo đều rồi tắt bếp.']},
-    {id:'x2', category:'xao', name:'Rau lang xào tỏi', time:10, ingredients:['rau lang','tỏi','dầu ăn'], steps:['Rau lang nhặt lá non, rửa sạch, để ráo.','Tỏi băm nhỏ, phi thơm với dầu ăn.','Cho rau lang vào xào lửa lớn 2-3 phút đến khi rau mềm.','Nêm gia vị vừa ăn, tắt bếp.']},
-    {id:'x3', category:'xao', name:'Bông cải xanh xào thịt bò', time:15, ingredients:['bông cải xanh','thịt bò','tỏi','dầu hào'], steps:['Thịt bò thái mỏng, ướp tỏi băm, dầu hào, tiêu 10 phút.','Bông cải xanh cắt miếng vừa ăn, chần sơ qua nước sôi.','Phi thơm tỏi, xào thịt bò lửa lớn đến khi tái thì gắp ra.','Cho bông cải vào xào nhanh, nêm dầu hào.','Cho thịt bò lại vào đảo đều, tắt bếp.']},
-    {id:'x4', category:'xao', name:'Đậu rồng xào tỏi', time:10, ingredients:['đậu rồng','tỏi','dầu ăn'], steps:['Đậu rồng rửa sạch, cắt xéo miếng vừa ăn.','Phi thơm tỏi băm với dầu ăn.','Cho đậu rồng vào xào lửa lớn 3-4 phút.','Nêm gia vị vừa ăn, tắt bếp khi đậu còn giòn.']},
-    {id:'x5', category:'xao', name:'Giá xào hẹ', time:8, ingredients:['giá đỗ','hẹ','dầu ăn'], steps:['Giá đỗ rửa sạch, để ráo. Hẹ cắt khúc 3cm.','Phi thơm dầu ăn.','Cho giá vào xào lửa lớn 1 phút.','Cho hẹ vào đảo nhanh thêm 1 phút, nêm gia vị, tắt bếp ngay để giá không ra nước.']},
-    {id:'x6', category:'xao', name:'Su su xào tỏi', time:10, ingredients:['su su','tỏi','dầu ăn'], steps:['Su su gọt vỏ, thái lát mỏng.','Phi thơm tỏi băm với dầu ăn.','Cho su su vào xào lửa lớn 4-5 phút đến khi chín tới.','Nêm gia vị vừa ăn, tắt bếp.']},
-    {id:'x7', category:'xao', name:'Cải thìa xào nấm', time:12, ingredients:['cải thìa','nấm','tỏi','dầu hào'], steps:['Cải thìa rửa sạch, bổ đôi. Nấm rửa sạch, cắt miếng vừa ăn.','Phi thơm tỏi băm với dầu ăn.','Cho nấm vào xào trước 2 phút.','Cho cải thìa vào xào chung lửa lớn 2-3 phút.','Nêm dầu hào, đảo đều, tắt bếp.']},
-    {id:'x8', category:'xao', name:'Dưa chua xào thịt heo quay', time:15, ingredients:['dưa cải chua','thịt heo quay','hành lá'], steps:['Dưa cải chua rửa sơ cho bớt chua, vắt ráo, cắt khúc.','Thịt heo quay cắt miếng vừa ăn.','Phi thơm hành, cho dưa chua vào xào trước 2-3 phút.','Cho thịt heo quay vào đảo đều, nêm nếm lại cho vừa ăn.','Tắt bếp, rắc hành lá.']},
-    {id:'x9', category:'xao', name:'Rau muống luộc', time:8, ingredients:['rau muống','muối'], steps:['Rau muống nhặt sạch, rửa kỹ.','Đun sôi nước với chút muối (và dầu ăn để rau xanh hơn).','Cho rau vào luộc 2-3 phút đến khi rau chín tới.','Vớt ra, có thể ngâm qua nước lạnh để rau giòn xanh.']},
-    {id:'x10', category:'xao', name:'Bắp cải luộc', time:10, ingredients:['bắp cải','muối'], steps:['Bắp cải cắt miếng vừa ăn, rửa sạch.','Đun sôi nước với chút muối.','Cho bắp cải vào luộc 3-4 phút đến khi vừa chín mềm.','Vớt ra để ráo, chấm nước mắm hoặc kho quẹt.']},
-    {id:'x11', category:'xao', name:'Su su luộc', time:10, ingredients:['su su','muối'], steps:['Su su gọt vỏ, cắt miếng vừa ăn.','Đun sôi nước với chút muối.','Cho su su vào luộc 5-6 phút đến khi chín mềm.','Vớt ra để ráo.']},
-    {id:'x12', category:'xao', name:'Đậu bắp luộc', time:8, ingredients:['đậu bắp','muối'], steps:['Đậu bắp rửa sạch, cắt bỏ cuống.','Đun sôi nước với chút muối.','Cho đậu bắp vào luộc 3-4 phút, không luộc quá lâu để tránh nhớt nhiều.','Vớt ra ngâm nước lạnh để giữ màu xanh giòn.']},
-    {id:'x13', category:'xao', name:'Bông cải trắng luộc', time:8, ingredients:['bông cải trắng','muối'], steps:['Bông cải trắng cắt miếng vừa ăn, rửa sạch.','Đun sôi nước với chút muối.','Cho bông cải vào luộc 4-5 phút đến khi chín tới.','Vớt ra để ráo.']},
-    {id:'x14', category:'xao', name:'Salad bắp cải trộn mè', time:15, ingredients:['bắp cải','cà rốt','mè rang','giấm','đường'], steps:['Bắp cải, cà rốt thái sợi mỏng.','Trộn giấm, đường, chút muối cho tan làm sốt.','Trộn bắp cải, cà rốt với sốt, để 10 phút cho ngấm.','Rắc mè rang lên trên trước khi ăn.']},
-    {id:'x15', category:'xao', name:'Salad dưa leo cà chua', time:10, ingredients:['dưa leo','cà chua','hành tây','giấm'], steps:['Dưa leo, cà chua thái miếng vừa ăn. Hành tây thái mỏng, ngâm nước đá cho bớt hăng.','Trộn đều dưa leo, cà chua, hành tây.','Rưới giấm, chút đường, muối, dầu ăn lên trên.','Trộn đều, dùng ngay để rau giữ độ giòn.']},
-    {id:'x16', category:'xao', name:'Nộm đu đủ', time:20, ingredients:['đu đủ xanh','cà rốt','đậu phộng','rau thơm'], steps:['Đu đủ xanh bào sợi, ngâm nước muối loãng rồi vắt ráo.','Cà rốt bào sợi. Đậu phộng rang giã dập.','Pha nước trộn gỏi: nước mắm, đường, chanh, tỏi ớt băm.','Trộn đu đủ, cà rốt với nước trộn, để thấm 5-10 phút.','Rắc đậu phộng và rau thơm lên trên.']},
-    {id:'x17', category:'xao', name:'Salad rau củ trộn dầu giấm', time:10, ingredients:['xà lách','cà chua','dưa leo','dầu ô liu','giấm'], steps:['Xà lách rửa sạch, để ráo, xé miếng vừa ăn.','Cà chua, dưa leo thái miếng.','Pha sốt dầu giấm theo tỷ lệ 3 dầu ô liu : 1 giấm, thêm muối, tiêu, chút đường.','Trộn đều rau củ với sốt ngay trước khi ăn để rau không bị mềm.']},
-    {id:'x18', category:'xao', name:'Gỏi ngó sen tôm thịt', time:25, ingredients:['ngó sen','tôm','thịt ba chỉ','rau thơm'], steps:['Ngó sen bào mỏng, ngâm nước chanh muối loãng cho trắng giòn.','Tôm luộc chín, bóc vỏ. Thịt ba chỉ luộc chín, thái mỏng.','Pha nước trộn gỏi chua ngọt: nước mắm, đường, chanh, tỏi ớt.','Trộn ngó sen, tôm, thịt với nước trộn.','Rắc rau thơm, đậu phộng rang lên trên trước khi dùng.']},
+    {id:'x1', category:'xao', mealType:'buacom', chay:true, region:null, name:'Rau muống xào tỏi', time:10, ingredients:['rau muống','tỏi','dầu ăn','nước mắm'], steps:['Rau muống nhặt bỏ lá già, rửa sạch, để ráo.','Tỏi băm nhỏ.','Phi thơm tỏi với dầu ăn trên lửa lớn.','Cho rau muống vào đảo nhanh tay 2-3 phút cho rau chín tới, còn giòn.','Nêm nước mắm, đảo đều rồi tắt bếp.']},
+    {id:'x2', category:'xao', mealType:'buacom', chay:true, region:null, name:'Rau lang xào tỏi', time:10, ingredients:['rau lang','tỏi','dầu ăn'], steps:['Rau lang nhặt lá non, rửa sạch, để ráo.','Tỏi băm nhỏ, phi thơm với dầu ăn.','Cho rau lang vào xào lửa lớn 2-3 phút đến khi rau mềm.','Nêm gia vị vừa ăn, tắt bếp.']},
+    {id:'x3', category:'xao', mealType:'buacom', chay:false, region:null, name:'Bông cải xanh xào thịt bò', time:15, ingredients:['bông cải xanh','thịt bò','tỏi','dầu hào'], steps:['Thịt bò thái mỏng, ướp tỏi băm, dầu hào, tiêu 10 phút.','Bông cải xanh cắt miếng vừa ăn, chần sơ qua nước sôi.','Phi thơm tỏi, xào thịt bò lửa lớn đến khi tái thì gắp ra.','Cho bông cải vào xào nhanh, nêm dầu hào.','Cho thịt bò lại vào đảo đều, tắt bếp.']},
+    {id:'x4', category:'xao', mealType:'buacom', chay:true, region:null, name:'Đậu rồng xào tỏi', time:10, ingredients:['đậu rồng','tỏi','dầu ăn'], steps:['Đậu rồng rửa sạch, cắt xéo miếng vừa ăn.','Phi thơm tỏi băm với dầu ăn.','Cho đậu rồng vào xào lửa lớn 3-4 phút.','Nêm gia vị vừa ăn, tắt bếp khi đậu còn giòn.']},
+    {id:'x5', category:'xao', mealType:'buacom', chay:true, region:null, name:'Giá xào hẹ', time:8, ingredients:['giá đỗ','hẹ','dầu ăn'], steps:['Giá đỗ rửa sạch, để ráo. Hẹ cắt khúc 3cm.','Phi thơm dầu ăn.','Cho giá vào xào lửa lớn 1 phút.','Cho hẹ vào đảo nhanh thêm 1 phút, nêm gia vị, tắt bếp ngay để giá không ra nước.']},
+    {id:'x6', category:'xao', mealType:'buacom', chay:true, region:null, name:'Su su xào tỏi', time:10, ingredients:['su su','tỏi','dầu ăn'], steps:['Su su gọt vỏ, thái lát mỏng.','Phi thơm tỏi băm với dầu ăn.','Cho su su vào xào lửa lớn 4-5 phút đến khi chín tới.','Nêm gia vị vừa ăn, tắt bếp.']},
+    {id:'x7', category:'xao', mealType:'buacom', chay:false, region:null, name:'Cải thìa xào nấm', time:12, ingredients:['cải thìa','nấm','tỏi','dầu hào'], steps:['Cải thìa rửa sạch, bổ đôi. Nấm rửa sạch, cắt miếng vừa ăn.','Phi thơm tỏi băm với dầu ăn.','Cho nấm vào xào trước 2 phút.','Cho cải thìa vào xào chung lửa lớn 2-3 phút.','Nêm dầu hào, đảo đều, tắt bếp.']},
+    {id:'x8', category:'xao', mealType:'buacom', chay:false, region:null, name:'Dưa chua xào thịt heo quay', time:15, ingredients:['dưa cải chua','thịt heo quay','hành lá'], steps:['Dưa cải chua rửa sơ cho bớt chua, vắt ráo, cắt khúc.','Thịt heo quay cắt miếng vừa ăn.','Phi thơm hành, cho dưa chua vào xào trước 2-3 phút.','Cho thịt heo quay vào đảo đều, nêm nếm lại cho vừa ăn.','Tắt bếp, rắc hành lá.']},
+    {id:'x9', category:'xao', mealType:'buacom', chay:true, region:null, name:'Rau muống luộc', time:8, ingredients:['rau muống','muối'], steps:['Rau muống nhặt sạch, rửa kỹ.','Đun sôi nước với chút muối (và dầu ăn để rau xanh hơn).','Cho rau vào luộc 2-3 phút đến khi rau chín tới.','Vớt ra, có thể ngâm qua nước lạnh để rau giòn xanh.']},
+    {id:'x10', category:'xao', mealType:'buacom', chay:true, region:null, name:'Bắp cải luộc', time:10, ingredients:['bắp cải','muối'], steps:['Bắp cải cắt miếng vừa ăn, rửa sạch.','Đun sôi nước với chút muối.','Cho bắp cải vào luộc 3-4 phút đến khi vừa chín mềm.','Vớt ra để ráo, chấm nước mắm hoặc kho quẹt.']},
+    {id:'x11', category:'xao', mealType:'buacom', chay:true, region:null, name:'Su su luộc', time:10, ingredients:['su su','muối'], steps:['Su su gọt vỏ, cắt miếng vừa ăn.','Đun sôi nước với chút muối.','Cho su su vào luộc 5-6 phút đến khi chín mềm.','Vớt ra để ráo.']},
+    {id:'x12', category:'xao', mealType:'buacom', chay:true, region:null, name:'Đậu bắp luộc', time:8, ingredients:['đậu bắp','muối'], steps:['Đậu bắp rửa sạch, cắt bỏ cuống.','Đun sôi nước với chút muối.','Cho đậu bắp vào luộc 3-4 phút, không luộc quá lâu để tránh nhớt nhiều.','Vớt ra ngâm nước lạnh để giữ màu xanh giòn.']},
+    {id:'x13', category:'xao', mealType:'buacom', chay:true, region:null, name:'Bông cải trắng luộc', time:8, ingredients:['bông cải trắng','muối'], steps:['Bông cải trắng cắt miếng vừa ăn, rửa sạch.','Đun sôi nước với chút muối.','Cho bông cải vào luộc 4-5 phút đến khi chín tới.','Vớt ra để ráo.']},
+    {id:'x14', category:'xao', mealType:'buacom', chay:true, region:null, name:'Salad bắp cải trộn mè', time:15, ingredients:['bắp cải','cà rốt','mè rang','giấm','đường'], steps:['Bắp cải, cà rốt thái sợi mỏng.','Trộn giấm, đường, chút muối cho tan làm sốt.','Trộn bắp cải, cà rốt với sốt, để 10 phút cho ngấm.','Rắc mè rang lên trên trước khi ăn.']},
+    {id:'x15', category:'xao', mealType:'buacom', chay:true, region:null, name:'Salad dưa leo cà chua', time:10, ingredients:['dưa leo','cà chua','hành tây','giấm'], steps:['Dưa leo, cà chua thái miếng vừa ăn. Hành tây thái mỏng, ngâm nước đá cho bớt hăng.','Trộn đều dưa leo, cà chua, hành tây.','Rưới giấm, chút đường, muối, dầu ăn lên trên.','Trộn đều, dùng ngay để rau giữ độ giòn.']},
+    {id:'x16', category:'xao', mealType:'buacom', chay:true, region:'bac', name:'Nộm đu đủ', time:20, ingredients:['đu đủ xanh','cà rốt','đậu phộng','rau thơm'], steps:['Đu đủ xanh bào sợi, ngâm nước muối loãng rồi vắt ráo.','Cà rốt bào sợi. Đậu phộng rang giã dập.','Pha nước trộn gỏi: nước mắm, đường, chanh, tỏi ớt băm.','Trộn đu đủ, cà rốt với nước trộn, để thấm 5-10 phút.','Rắc đậu phộng và rau thơm lên trên.']},
+    {id:'x17', category:'xao', mealType:'buacom', chay:true, region:null, name:'Salad rau củ trộn dầu giấm', time:10, ingredients:['xà lách','cà chua','dưa leo','dầu ô liu','giấm'], steps:['Xà lách rửa sạch, để ráo, xé miếng vừa ăn.','Cà chua, dưa leo thái miếng.','Pha sốt dầu giấm theo tỷ lệ 3 dầu ô liu : 1 giấm, thêm muối, tiêu, chút đường.','Trộn đều rau củ với sốt ngay trước khi ăn để rau không bị mềm.']},
+    {id:'x18', category:'xao', mealType:'buacom', chay:false, region:'nam', name:'Gỏi ngó sen tôm thịt', time:25, ingredients:['ngó sen','tôm','thịt ba chỉ','rau thơm'], steps:['Ngó sen bào mỏng, ngâm nước chanh muối loãng cho trắng giòn.','Tôm luộc chín, bóc vỏ. Thịt ba chỉ luộc chín, thái mỏng.','Pha nước trộn gỏi chua ngọt: nước mắm, đường, chanh, tỏi ớt.','Trộn ngó sen, tôm, thịt với nước trộn.','Rắc rau thơm, đậu phộng rang lên trên trước khi dùng.']},
+    {id:'x19', category:'xao', mealType:'buacom', chay:true, region:null, name:'Đậu hũ chiên sả ớt', time:15, ingredients:['đậu hũ','sả','ớt','nước tương'], steps:['Đậu hũ cắt miếng vuông vừa ăn, để ráo nước.','Chiên đậu hũ vàng giòn các mặt, vớt ra.','Sả, ớt băm nhỏ, phi thơm với dầu ăn.','Cho đậu hũ vào đảo cùng sả ớt, nêm nước tương, đảo đều đến khi thấm.']},
+    {id:'x20', category:'xao', mealType:'buacom', chay:true, region:null, name:'Nấm đùi gà xào bơ tỏi', time:12, ingredients:['nấm đùi gà','bơ','tỏi'], steps:['Nấm đùi gà rửa sạch, xé sợi hoặc thái lát.','Đun chảy bơ, phi thơm tỏi băm.','Cho nấm vào xào lửa lớn 5-7 phút đến khi nấm săn lại.','Nêm gia vị vừa ăn, tắt bếp.']},
 
     // Canh
-    {id:'c1', category:'canh', name:'Canh chua cá lóc', time:30, ingredients:['cá lóc','me','cà chua','dứa','đậu bắp','giá'], steps:['Cá lóc làm sạch, cắt khúc, ướp chút muối.','Đun sôi nước, dầm me lấy nước chua.','Cho cá vào nấu chín, vớt bọt.','Cho cà chua, dứa, đậu bắp vào nấu thêm 3-4 phút.','Nêm nước mắm, đường, cho giá và rau thơm vào, tắt bếp.']},
-    {id:'c2', category:'canh', name:'Canh cua mồng tơi', time:20, ingredients:['cua đồng','mồng tơi','mướp'], steps:['Cua đồng giã hoặc xay, lọc lấy nước, bỏ xác.','Đun nước cua trên lửa vừa, khuấy nhẹ đến khi riêu cua nổi lên.','Cho mồng tơi, mướp thái miếng vào nấu chín.','Nêm gia vị vừa ăn, tắt bếp.']},
-    {id:'c3', category:'canh', name:'Canh tôm nấu bầu', time:15, ingredients:['tôm','bầu'], steps:['Tôm bóc vỏ, băm nhỏ hoặc để nguyên, ướp chút gia vị.','Bầu gọt vỏ, thái miếng vừa ăn.','Phi thơm hành, xào sơ tôm cho thơm.','Đổ nước vào đun sôi, cho bầu vào nấu 3-4 phút đến chín.','Nêm gia vị, rắc hành lá, tắt bếp.']},
-    {id:'c4', category:'canh', name:'Canh rau dền nấu tôm', time:15, ingredients:['rau dền','tôm'], steps:['Tôm bóc vỏ, băm nhỏ, ướp sơ.','Rau dền nhặt rửa sạch.','Phi thơm tôm với chút hành, đổ nước vào đun sôi.','Cho rau dền vào nấu 2-3 phút đến chín mềm.','Nêm gia vị, tắt bếp.']},
-    {id:'c5', category:'canh', name:'Canh khổ qua nhồi thịt', time:30, ingredients:['khổ qua','thịt bằm','nấm mèo'], steps:['Khổ qua bổ đôi, bỏ ruột, rửa sạch.','Thịt bằm trộn với nấm mèo băm, hành, gia vị làm nhân.','Nhồi nhân vào khổ qua.','Đun sôi nước, thả khổ qua nhồi vào nấu 15-20 phút đến chín mềm.','Nêm gia vị vừa ăn, rắc hành ngò.']},
-    {id:'c6', category:'canh', name:'Canh cà chua trứng', time:10, ingredients:['cà chua','trứng','hành lá'], steps:['Cà chua thái múi cau. Trứng đánh tan.','Phi thơm hành, xào cà chua cho ra màu và mềm.','Đổ nước vào đun sôi.','Từ từ rót trứng vào theo vòng tròn, khuấy nhẹ tạo vân trứng.','Nêm gia vị, rắc hành lá, tắt bếp.']},
-    {id:'c7', category:'canh', name:'Canh bí đỏ nấu tôm', time:20, ingredients:['bí đỏ','tôm'], steps:['Tôm bóc vỏ, băm nhỏ. Bí đỏ gọt vỏ, cắt miếng vừa ăn.','Phi thơm tôm với hành.','Đổ nước vào đun sôi, cho bí đỏ vào nấu 10-12 phút đến mềm.','Nêm gia vị, tắt bếp.']},
-    {id:'c8', category:'canh', name:'Canh rong biển đậu hũ', time:15, ingredients:['rong biển','đậu hũ','thịt bằm'], steps:['Rong biển khô ngâm nở, rửa sạch, cắt khúc.','Đậu hũ cắt miếng vuông. Thịt bằm ướp sơ.','Đun nước sôi, cho thịt bằm vào nấu chín, vớt bọt.','Cho đậu hũ và rong biển vào nấu thêm 3-4 phút.','Nêm gia vị, tắt bếp.']},
-    {id:'c9', category:'canh', name:'Canh cải xanh nấu gừng', time:15, ingredients:['cải xanh','gừng','thịt bằm'], steps:['Cải xanh rửa sạch, cắt khúc. Gừng thái sợi.','Thịt bằm ướp sơ với chút gia vị.','Đun nước sôi, cho thịt bằm vào nấu chín, vớt bọt.','Cho gừng và cải xanh vào nấu 2-3 phút.','Nêm gia vị vừa ăn, tắt bếp.']},
-    {id:'c10', category:'canh', name:'Canh sườn bí đao', time:30, ingredients:['sườn non','bí đao'], steps:['Sườn non chặt miếng, chần qua nước sôi cho sạch, rửa lại.','Ninh sườn với nước khoảng 25-30 phút cho mềm, vớt bọt.','Bí đao gọt vỏ, cắt miếng vừa ăn.','Cho bí đao vào nấu thêm 5-7 phút đến chín.','Nêm gia vị, rắc hành ngò, tắt bếp.']},
-    {id:'c11', category:'canh', name:'Canh chua tôm dứa', time:25, ingredients:['tôm','dứa','cà chua','me'], steps:['Tôm bóc vỏ, ướp sơ. Dứa, cà chua cắt miếng.','Đun sôi nước, dầm me lấy nước chua.','Cho cà chua, dứa vào nấu 3-4 phút.','Cho tôm vào nấu chín.','Nêm mắm, đường vừa ăn, rắc rau thơm, tắt bếp.']},
-    {id:'c12', category:'canh', name:'Canh mướp nấu ngao', time:20, ingredients:['mướp','ngao'], steps:['Ngao ngâm nước vo gạo cho nhả cát, rửa sạch.','Luộc ngao đến khi mở miệng, lọc lấy nước trong, gỡ thịt ngao.','Mướp gọt vỏ, thái miếng vừa ăn.','Đun nước ngao sôi lại, cho mướp vào nấu 2-3 phút.','Cho thịt ngao vào, nêm gia vị, tắt bếp.']},
-    {id:'c13', category:'canh', name:'Canh rau ngót thịt bằm', time:15, ingredients:['rau ngót','thịt bằm'], steps:['Rau ngót tuốt lá, rửa sạch.','Thịt bằm ướp sơ với gia vị.','Phi thơm hành, xào săn thịt bằm.','Đổ nước vào đun sôi, cho rau ngót vào nấu 2-3 phút.','Nêm gia vị, tắt bếp.']},
-    {id:'c14', category:'canh', name:'Canh khoai mỡ nấu tôm', time:20, ingredients:['khoai mỡ','tôm'], steps:['Khoai mỡ gọt vỏ, cắt miếng, rửa sạch.','Tôm bóc vỏ, băm nhỏ, ướp sơ.','Phi thơm tôm với hành, đổ nước vào đun sôi.','Cho khoai mỡ vào nấu 8-10 phút đến khi mềm sánh.','Nêm gia vị, tắt bếp.']},
-    {id:'c15', category:'canh', name:'Canh súp lơ nấu xương', time:30, ingredients:['súp lơ','xương heo','cà rốt'], steps:['Xương heo chần qua nước sôi, rửa sạch.','Ninh xương với nước khoảng 25-30 phút, vớt bọt.','Súp lơ, cà rốt cắt miếng vừa ăn.','Cho cà rốt vào nấu trước 5 phút, sau đó cho súp lơ vào nấu thêm 4-5 phút.','Nêm gia vị, tắt bếp.']},
-    {id:'c16', category:'canh', name:'Canh cải bó xôi nấu thịt', time:15, ingredients:['cải bó xôi','thịt bằm'], steps:['Cải bó xôi rửa sạch, cắt khúc.','Thịt bằm ướp sơ với gia vị.','Đun nước sôi, cho thịt bằm vào nấu chín, vớt bọt.','Cho cải bó xôi vào nấu 1-2 phút đến chín tới.','Nêm gia vị, tắt bếp.']},
-    {id:'c17', category:'canh', name:'Canh chua bông so đũa', time:25, ingredients:['bông so đũa','cá','me'], steps:['Bông so đũa nhặt rửa sạch. Cá làm sạch, cắt khúc.','Đun sôi nước, dầm me lấy nước chua.','Cho cá vào nấu chín, vớt bọt.','Cho bông so đũa vào nấu 2 phút.','Nêm mắm đường vừa ăn, tắt bếp.']},
-    {id:'c18', category:'canh', name:'Canh bầu nấu tép', time:15, ingredients:['bầu','tép'], steps:['Tép rửa sạch, để ráo. Bầu gọt vỏ, thái miếng.','Phi thơm hành, xào sơ tép cho thơm.','Đổ nước vào đun sôi, cho bầu vào nấu 4-5 phút đến chín.','Nêm gia vị, rắc hành lá, tắt bếp.']},
+    {id:'c1', category:'canh', mealType:'buacom', chay:false, region:'nam', name:'Canh chua cá lóc', time:30, ingredients:['cá lóc','me','cà chua','dứa','đậu bắp','giá'], steps:['Cá lóc làm sạch, cắt khúc, ướp chút muối.','Đun sôi nước, dầm me lấy nước chua.','Cho cá vào nấu chín, vớt bọt.','Cho cà chua, dứa, đậu bắp vào nấu thêm 3-4 phút.','Nêm nước mắm, đường, cho giá và rau thơm vào, tắt bếp.']},
+    {id:'c2', category:'canh', mealType:'buacom', chay:false, region:'bac', name:'Canh cua mồng tơi', time:20, ingredients:['cua đồng','mồng tơi','mướp'], steps:['Cua đồng giã hoặc xay, lọc lấy nước, bỏ xác.','Đun nước cua trên lửa vừa, khuấy nhẹ đến khi riêu cua nổi lên.','Cho mồng tơi, mướp thái miếng vào nấu chín.','Nêm gia vị vừa ăn, tắt bếp.']},
+    {id:'c3', category:'canh', mealType:'buacom', chay:false, region:null, name:'Canh tôm nấu bầu', time:15, ingredients:['tôm','bầu'], steps:['Tôm bóc vỏ, băm nhỏ hoặc để nguyên, ướp chút gia vị.','Bầu gọt vỏ, thái miếng vừa ăn.','Phi thơm hành, xào sơ tôm cho thơm.','Đổ nước vào đun sôi, cho bầu vào nấu 3-4 phút đến chín.','Nêm gia vị, rắc hành lá, tắt bếp.']},
+    {id:'c4', category:'canh', mealType:'buacom', chay:false, region:null, name:'Canh rau dền nấu tôm', time:15, ingredients:['rau dền','tôm'], steps:['Tôm bóc vỏ, băm nhỏ, ướp sơ.','Rau dền nhặt rửa sạch.','Phi thơm tôm với chút hành, đổ nước vào đun sôi.','Cho rau dền vào nấu 2-3 phút đến chín mềm.','Nêm gia vị, tắt bếp.']},
+    {id:'c5', category:'canh', mealType:'buacom', chay:false, region:null, name:'Canh khổ qua nhồi thịt', time:30, ingredients:['khổ qua','thịt bằm','nấm mèo'], steps:['Khổ qua bổ đôi, bỏ ruột, rửa sạch.','Thịt bằm trộn với nấm mèo băm, hành, gia vị làm nhân.','Nhồi nhân vào khổ qua.','Đun sôi nước, thả khổ qua nhồi vào nấu 15-20 phút đến chín mềm.','Nêm gia vị vừa ăn, rắc hành ngò.']},
+    {id:'c6', category:'canh', mealType:'buacom', chay:false, region:null, name:'Canh cà chua trứng', time:10, ingredients:['cà chua','trứng','hành lá'], steps:['Cà chua thái múi cau. Trứng đánh tan.','Phi thơm hành, xào cà chua cho ra màu và mềm.','Đổ nước vào đun sôi.','Từ từ rót trứng vào theo vòng tròn, khuấy nhẹ tạo vân trứng.','Nêm gia vị, rắc hành lá, tắt bếp.']},
+    {id:'c7', category:'canh', mealType:'buacom', chay:false, region:null, name:'Canh bí đỏ nấu tôm', time:20, ingredients:['bí đỏ','tôm'], steps:['Tôm bóc vỏ, băm nhỏ. Bí đỏ gọt vỏ, cắt miếng vừa ăn.','Phi thơm tôm với hành.','Đổ nước vào đun sôi, cho bí đỏ vào nấu 10-12 phút đến mềm.','Nêm gia vị, tắt bếp.']},
+    {id:'c8', category:'canh', mealType:'buacom', chay:false, region:null, name:'Canh rong biển đậu hũ', time:15, ingredients:['rong biển','đậu hũ','thịt bằm'], steps:['Rong biển khô ngâm nở, rửa sạch, cắt khúc.','Đậu hũ cắt miếng vuông. Thịt bằm ướp sơ.','Đun nước sôi, cho thịt bằm vào nấu chín, vớt bọt.','Cho đậu hũ và rong biển vào nấu thêm 3-4 phút.','Nêm gia vị, tắt bếp.']},
+    {id:'c9', category:'canh', mealType:'buacom', chay:false, region:null, name:'Canh cải xanh nấu gừng', time:15, ingredients:['cải xanh','gừng','thịt bằm'], steps:['Cải xanh rửa sạch, cắt khúc. Gừng thái sợi.','Thịt bằm ướp sơ với chút gia vị.','Đun nước sôi, cho thịt bằm vào nấu chín, vớt bọt.','Cho gừng và cải xanh vào nấu 2-3 phút.','Nêm gia vị vừa ăn, tắt bếp.']},
+    {id:'c10', category:'canh', mealType:'buacom', chay:false, region:null, name:'Canh sườn bí đao', time:30, ingredients:['sườn non','bí đao'], steps:['Sườn non chặt miếng, chần qua nước sôi cho sạch, rửa lại.','Ninh sườn với nước khoảng 25-30 phút cho mềm, vớt bọt.','Bí đao gọt vỏ, cắt miếng vừa ăn.','Cho bí đao vào nấu thêm 5-7 phút đến chín.','Nêm gia vị, rắc hành ngò, tắt bếp.']},
+    {id:'c11', category:'canh', mealType:'buacom', chay:false, region:null, name:'Canh chua tôm dứa', time:25, ingredients:['tôm','dứa','cà chua','me'], steps:['Tôm bóc vỏ, ướp sơ. Dứa, cà chua cắt miếng.','Đun sôi nước, dầm me lấy nước chua.','Cho cà chua, dứa vào nấu 3-4 phút.','Cho tôm vào nấu chín.','Nêm mắm, đường vừa ăn, rắc rau thơm, tắt bếp.']},
+    {id:'c12', category:'canh', mealType:'buacom', chay:false, region:null, name:'Canh mướp nấu ngao', time:20, ingredients:['mướp','ngao'], steps:['Ngao ngâm nước vo gạo cho nhả cát, rửa sạch.','Luộc ngao đến khi mở miệng, lọc lấy nước trong, gỡ thịt ngao.','Mướp gọt vỏ, thái miếng vừa ăn.','Đun nước ngao sôi lại, cho mướp vào nấu 2-3 phút.','Cho thịt ngao vào, nêm gia vị, tắt bếp.']},
+    {id:'c13', category:'canh', mealType:'buacom', chay:false, region:null, name:'Canh rau ngót thịt bằm', time:15, ingredients:['rau ngót','thịt bằm'], steps:['Rau ngót tuốt lá, rửa sạch.','Thịt bằm ướp sơ với gia vị.','Phi thơm hành, xào săn thịt bằm.','Đổ nước vào đun sôi, cho rau ngót vào nấu 2-3 phút.','Nêm gia vị, tắt bếp.']},
+    {id:'c14', category:'canh', mealType:'buacom', chay:false, region:null, name:'Canh khoai mỡ nấu tôm', time:20, ingredients:['khoai mỡ','tôm'], steps:['Khoai mỡ gọt vỏ, cắt miếng, rửa sạch.','Tôm bóc vỏ, băm nhỏ, ướp sơ.','Phi thơm tôm với hành, đổ nước vào đun sôi.','Cho khoai mỡ vào nấu 8-10 phút đến khi mềm sánh.','Nêm gia vị, tắt bếp.']},
+    {id:'c15', category:'canh', mealType:'buacom', chay:false, region:null, name:'Canh súp lơ nấu xương', time:30, ingredients:['súp lơ','xương heo','cà rốt'], steps:['Xương heo chần qua nước sôi, rửa sạch.','Ninh xương với nước khoảng 25-30 phút, vớt bọt.','Súp lơ, cà rốt cắt miếng vừa ăn.','Cho cà rốt vào nấu trước 5 phút, sau đó cho súp lơ vào nấu thêm 4-5 phút.','Nêm gia vị, tắt bếp.']},
+    {id:'c16', category:'canh', mealType:'buacom', chay:false, region:null, name:'Canh cải bó xôi nấu thịt', time:15, ingredients:['cải bó xôi','thịt bằm'], steps:['Cải bó xôi rửa sạch, cắt khúc.','Thịt bằm ướp sơ với gia vị.','Đun nước sôi, cho thịt bằm vào nấu chín, vớt bọt.','Cho cải bó xôi vào nấu 1-2 phút đến chín tới.','Nêm gia vị, tắt bếp.']},
+    {id:'c17', category:'canh', mealType:'buacom', chay:false, region:'nam', name:'Canh chua bông so đũa', time:25, ingredients:['bông so đũa','cá','me'], steps:['Bông so đũa nhặt rửa sạch. Cá làm sạch, cắt khúc.','Đun sôi nước, dầm me lấy nước chua.','Cho cá vào nấu chín, vớt bọt.','Cho bông so đũa vào nấu 2 phút.','Nêm mắm đường vừa ăn, tắt bếp.']},
+    {id:'c18', category:'canh', mealType:'buacom', chay:false, region:null, name:'Canh bầu nấu tép', time:15, ingredients:['bầu','tép'], steps:['Tép rửa sạch, để ráo. Bầu gọt vỏ, thái miếng.','Phi thơm hành, xào sơ tép cho thơm.','Đổ nước vào đun sôi, cho bầu vào nấu 4-5 phút đến chín.','Nêm gia vị, rắc hành lá, tắt bếp.']},
+    {id:'c19', category:'canh', mealType:'buacom', chay:true, region:'nam', name:'Canh chua đậu hũ dứa', time:20, ingredients:['đậu hũ','dứa','cà chua','me','giá'], steps:['Đậu hũ cắt miếng vuông, chiên sơ cho săn.','Đun sôi nước, dầm me lấy nước chua.','Cho cà chua, dứa vào nấu 3-4 phút.','Cho đậu hũ vào nấu thêm 2 phút, cho giá và rau thơm vào.','Nêm gia vị chay vừa ăn, tắt bếp.']},
+    {id:'c20', category:'canh', mealType:'buacom', chay:true, region:null, name:'Canh bí đỏ đậu phộng', time:20, ingredients:['bí đỏ','đậu phộng','hành lá'], steps:['Đậu phộng ngâm mềm, luộc sơ.','Bí đỏ gọt vỏ, cắt miếng vừa ăn.','Đun nước sôi, cho đậu phộng vào nấu 10 phút cho mềm.','Cho bí đỏ vào nấu thêm 10-12 phút đến khi bí mềm.','Nêm gia vị, rắc hành lá, tắt bếp.']},
+    {id:'c21', category:'canh', mealType:'buacom', chay:true, region:null, name:'Canh nấm đậu hũ', time:15, ingredients:['nấm','đậu hũ','cà rốt','hành lá'], steps:['Nấm rửa sạch, cắt miếng. Đậu hũ cắt miếng vuông. Cà rốt thái lát.','Đun nước sôi, cho cà rốt vào nấu trước 5 phút.','Cho nấm và đậu hũ vào nấu thêm 3-4 phút.','Nêm gia vị, rắc hành lá, tắt bếp.']},
+    {id:'c22', category:'canh', mealType:'buacom', chay:true, region:null, name:'Canh khổ qua chay nấu nấm', time:25, ingredients:['khổ qua','nấm mèo','đậu hũ'], steps:['Khổ qua bổ đôi, bỏ ruột, rửa sạch, thái lát.','Nấm mèo ngâm nở, băm nhỏ. Đậu hũ tán nhuyễn trộn cùng nấm mèo làm nhân.','Nhồi nhân vào khổ qua (hoặc thả khổ qua thái lát tự do nếu không nhồi).','Đun sôi nước, cho khổ qua vào nấu 15 phút đến mềm.','Nêm gia vị chay vừa ăn, tắt bếp.']},
+    {id:'c23', category:'canh', mealType:'buacom', chay:true, region:null, name:'Canh cải ngọt nấu nấm', time:12, ingredients:['cải ngọt','nấm','gừng'], steps:['Cải ngọt rửa sạch, cắt khúc. Nấm rửa sạch, cắt miếng. Gừng thái sợi.','Đun nước sôi, cho nấm và gừng vào nấu 3 phút.','Cho cải ngọt vào nấu thêm 2 phút đến chín tới.','Nêm gia vị, tắt bếp.']},
 
     // Món mặn
-    {id:'m1', category:'man', name:'Thịt kho tàu', time:60, ingredients:['thịt ba chỉ','trứng','nước dừa'], steps:['Thịt ba chỉ cắt miếng vuông, chần qua nước sôi cho sạch.','Ướp thịt với nước mắm, đường, hành tỏi băm khoảng 20 phút.','Thắng nước màu (đường + nước), cho thịt vào đảo săn.','Đổ nước dừa xâm xấp, đun sôi rồi hạ lửa nhỏ, kho khoảng 45 phút.','Cho trứng luộc bóc vỏ vào, kho thêm 10-15 phút đến khi thịt mềm, nước sánh.']},
-    {id:'m2', category:'man', name:'Cá kho tộ', time:40, ingredients:['cá lóc','nước mắm','đường','tiêu'], steps:['Cá làm sạch, cắt khúc, ướp muối tiêu, nước mắm khoảng 15 phút.','Thắng nước màu bằng đường trong nồi đất (tộ).','Xếp cá vào, thêm nước mắm, đường, tiêu.','Kho lửa nhỏ 25-30 phút, thỉnh thoảng rưới nước kho lên cá.','Rắc tiêu, hành lá khi nước sánh lại, tắt bếp.']},
-    {id:'m3', category:'man', name:'Gà kho gừng', time:30, ingredients:['gà','gừng','nước mắm'], steps:['Gà chặt miếng vừa ăn, ướp với gừng thái sợi, nước mắm, tiêu 15 phút.','Phi thơm hành, cho gà vào xào săn.','Đổ nước xâm xấp, đun sôi rồi hạ lửa nhỏ.','Kho 20-25 phút đến khi gà mềm, nước sánh lại.','Nêm lại cho vừa ăn, rắc hành lá.']},
-    {id:'m4', category:'man', name:'Thịt kho tiêu', time:30, ingredients:['thịt ba chỉ','tiêu','nước mắm'], steps:['Thịt ba chỉ cắt miếng, ướp với nước mắm, tiêu, hành tỏi băm 20 phút.','Phi thơm tỏi, cho thịt vào xào săn.','Đổ nước xâm xấp, đun sôi rồi hạ lửa nhỏ.','Kho 25-30 phút đến khi thịt mềm, nước sánh.','Rắc thêm tiêu xay trước khi tắt bếp.']},
-    {id:'m5', category:'man', name:'Tôm rim mặn ngọt', time:15, ingredients:['tôm','nước mắm','đường'], steps:['Tôm rửa sạch, để nguyên vỏ hoặc bóc vỏ chừa đuôi.','Ướp tôm với nước mắm, đường 10 phút.','Phi thơm tỏi, cho tôm vào rim lửa vừa.','Rim đến khi nước sánh lại, bám đều vào tôm, tắt bếp.']},
-    {id:'m6', category:'man', name:'Đậu hũ sốt cà chua', time:15, ingredients:['đậu hũ','cà chua','hành lá'], steps:['Đậu hũ cắt miếng vuông, chiên vàng các mặt, vớt ra.','Cà chua băm nhỏ hoặc xay.','Phi thơm hành, xào cà chua cho nhuyễn và ra màu.','Cho đậu hũ vào, thêm chút nước, nêm gia vị, đun sôi nhẹ 5 phút.','Rắc hành lá, tắt bếp.']},
-    {id:'m7', category:'man', name:'Thịt rang cháy cạnh', time:20, ingredients:['thịt ba chỉ','nước mắm','đường'], steps:['Thịt ba chỉ cắt miếng vừa ăn, ướp nước mắm, tiêu 15 phút.','Cho thịt vào chảo không dầu (mỡ tự ra), rang lửa vừa.','Rang đến khi thịt săn vàng, cháy cạnh nhẹ.','Nêm thêm chút đường, nước mắm cho đậm, đảo đều đến khi khô nước.']},
-    {id:'m8', category:'man', name:'Cá chiên sốt cà', time:20, ingredients:['cá','cà chua','hành'], steps:['Cá làm sạch, khía nhẹ, ướp muối tiêu, chiên vàng hai mặt, vớt ra.','Cà chua, hành băm nhỏ.','Phi thơm hành, xào cà chua nhuyễn.','Cho cá vào, thêm chút nước, rim nhỏ lửa 5-7 phút cho ngấm sốt.','Nêm gia vị vừa ăn, tắt bếp.']},
-    {id:'m9', category:'man', name:'Sườn xào chua ngọt', time:30, ingredients:['sườn non','cà chua','dứa'], steps:['Sườn non chặt miếng, chần sơ, rửa sạch, ướp gia vị 15 phút.','Chiên sườn vàng đều, vớt ra.','Phi thơm tỏi, cho cà chua, dứa vào xào.','Pha nước sốt chua ngọt (giấm, đường, nước mắm, tương cà), đổ vào đun sôi.','Cho sườn vào đảo đều đến khi nước sốt sánh bám đều, tắt bếp.']},
-    {id:'m10', category:'man', name:'Trứng chiên thịt bằm', time:10, ingredients:['trứng','thịt bằm','hành lá'], steps:['Thịt bằm ướp sơ với chút gia vị.','Đánh tan trứng, trộn thịt bằm và hành lá thái nhỏ vào.','Nêm gia vị vừa ăn.','Đổ hỗn hợp vào chảo dầu nóng, chiên vàng đều hai mặt lửa vừa.']},
-    {id:'m11', category:'man', name:'Gà chiên nước mắm', time:25, ingredients:['gà','nước mắm','tỏi'], steps:['Gà chặt miếng vừa ăn, ướp chút muối, chiên vàng giòn, vớt ra.','Pha nước mắm với đường theo tỷ lệ 1:1, đun cho sánh kẹo lại.','Phi thơm tỏi băm, đổ nước mắm đường vào.','Cho gà vào đảo đều đến khi nước mắm bám đều, tắt bếp.']},
-    {id:'m12', category:'man', name:'Mực xào sa tế', time:15, ingredients:['mực','sa tế','hành tây'], steps:['Mực làm sạch, cắt khoanh hoặc khía hoa, ướp sơ.','Hành tây cắt múi cau.','Phi thơm tỏi với sa tế.','Cho mực vào xào lửa lớn nhanh tay 2-3 phút.','Cho hành tây vào đảo đều, nêm gia vị, tắt bếp ngay để mực không dai.']},
-    {id:'m13', category:'man', name:'Thịt bò xào hành tây', time:15, ingredients:['thịt bò','hành tây','tỏi'], steps:['Thịt bò thái mỏng, ướp tỏi băm, dầu hào, tiêu 10 phút.','Hành tây cắt múi cau.','Xào thịt bò lửa lớn nhanh tay đến khi tái thì gắp ra.','Xào sơ hành tây 1 phút, cho thịt bò vào đảo đều.','Nêm gia vị, tắt bếp ngay để thịt không dai.']},
-    {id:'m14', category:'man', name:'Chả trứng hấp', time:20, ingredients:['trứng','thịt bằm','mộc nhĩ'], steps:['Thịt bằm trộn với trứng, mộc nhĩ băm nhỏ, hành lá, gia vị.','Đánh đều hỗn hợp cho mịn.','Đổ vào khuôn hoặc chén sâu lòng.','Hấp cách thủy lửa vừa 20-25 phút đến khi chín, xăm tăm không dính là được.']},
-    {id:'m15', category:'man', name:'Cá basa kho nghệ', time:25, ingredients:['cá basa','nghệ','nước mắm'], steps:['Cá basa cắt khúc, ướp với nghệ tươi giã hoặc bột nghệ, nước mắm 20 phút.','Phi thơm hành tỏi, cho cá vào áp chảo sơ hai mặt.','Thêm chút nước, đun sôi rồi hạ lửa nhỏ.','Kho 15-20 phút đến khi nước sánh lại, nêm vừa ăn.']},
-    {id:'m16', category:'man', name:'Tôm rang thịt', time:20, ingredients:['tôm','thịt ba chỉ','hành'], steps:['Thịt ba chỉ cắt hạt lựu, tôm bóc vỏ.','Phi thơm hành, xào săn thịt ba chỉ trước.','Cho tôm vào xào chung đến khi tôm chín đỏ.','Nêm nước mắm, đường, rang đến khi hơi khô, đậm vị.']},
-    {id:'m17', category:'man', name:'Thịt heo quay', time:60, ingredients:['thịt ba chỉ','ngũ vị hương'], steps:['Thịt ba chỉ luộc sơ, để ráo, xăm da cho đều.','Ướp ngũ vị hương, muối vào phần thịt (tránh dính da), để da khô ráo hoàn toàn.','Nướng hoặc quay lửa vừa cho chín thịt trước, sau đó tăng nhiệt để da phồng giòn.','Quay đến khi da vàng giòn đều, để nguội bớt rồi chặt miếng.']},
-    {id:'m18', category:'man', name:'Đậu hũ nhồi thịt sốt cà', time:25, ingredients:['đậu hũ','thịt bằm','cà chua'], steps:['Đậu hũ cắt miếng, khoét giữa nhẹ. Thịt bằm trộn gia vị làm nhân.','Nhồi thịt vào đậu hũ, chiên sơ mặt có nhân cho săn.','Cà chua băm nhuyễn, phi thơm hành rồi xào cà chua.','Cho đậu hũ vào, thêm chút nước, rim nhỏ lửa 10 phút đến khi thịt chín và sốt sánh.','Nêm gia vị, rắc hành lá, tắt bếp.']}
+    {id:'m1', category:'man', mealType:'buacom', chay:false, region:'nam', name:'Thịt kho tàu', time:60, ingredients:['thịt ba chỉ','trứng','nước dừa'], steps:['Thịt ba chỉ cắt miếng vuông, chần qua nước sôi cho sạch.','Ướp thịt với nước mắm, đường, hành tỏi băm khoảng 20 phút.','Thắng nước màu (đường + nước), cho thịt vào đảo săn.','Đổ nước dừa xâm xấp, đun sôi rồi hạ lửa nhỏ, kho khoảng 45 phút.','Cho trứng luộc bóc vỏ vào, kho thêm 10-15 phút đến khi thịt mềm, nước sánh.']},
+    {id:'m2', category:'man', mealType:'buacom', chay:false, region:'nam', name:'Cá kho tộ', time:40, ingredients:['cá lóc','nước mắm','đường','tiêu'], steps:['Cá làm sạch, cắt khúc, ướp muối tiêu, nước mắm khoảng 15 phút.','Thắng nước màu bằng đường trong nồi đất (tộ).','Xếp cá vào, thêm nước mắm, đường, tiêu.','Kho lửa nhỏ 25-30 phút, thỉnh thoảng rưới nước kho lên cá.','Rắc tiêu, hành lá khi nước sánh lại, tắt bếp.']},
+    {id:'m3', category:'man', mealType:'buacom', chay:false, region:null, name:'Gà kho gừng', time:30, ingredients:['gà','gừng','nước mắm'], steps:['Gà chặt miếng vừa ăn, ướp với gừng thái sợi, nước mắm, tiêu 15 phút.','Phi thơm hành, cho gà vào xào săn.','Đổ nước xâm xấp, đun sôi rồi hạ lửa nhỏ.','Kho 20-25 phút đến khi gà mềm, nước sánh lại.','Nêm lại cho vừa ăn, rắc hành lá.']},
+    {id:'m4', category:'man', mealType:'buacom', chay:false, region:null, name:'Thịt kho tiêu', time:30, ingredients:['thịt ba chỉ','tiêu','nước mắm'], steps:['Thịt ba chỉ cắt miếng, ướp với nước mắm, tiêu, hành tỏi băm 20 phút.','Phi thơm tỏi, cho thịt vào xào săn.','Đổ nước xâm xấp, đun sôi rồi hạ lửa nhỏ.','Kho 25-30 phút đến khi thịt mềm, nước sánh.','Rắc thêm tiêu xay trước khi tắt bếp.']},
+    {id:'m5', category:'man', mealType:'buacom', chay:false, region:'nam', name:'Tôm rim mặn ngọt', time:15, ingredients:['tôm','nước mắm','đường'], steps:['Tôm rửa sạch, để nguyên vỏ hoặc bóc vỏ chừa đuôi.','Ướp tôm với nước mắm, đường 10 phút.','Phi thơm tỏi, cho tôm vào rim lửa vừa.','Rim đến khi nước sánh lại, bám đều vào tôm, tắt bếp.']},
+    {id:'m6', category:'man', mealType:'buacom', chay:true, region:null, name:'Đậu hũ sốt cà chua', time:15, ingredients:['đậu hũ','cà chua','hành lá'], steps:['Đậu hũ cắt miếng vuông, chiên vàng các mặt, vớt ra.','Cà chua băm nhỏ hoặc xay.','Phi thơm hành, xào cà chua cho nhuyễn và ra màu.','Cho đậu hũ vào, thêm chút nước, nêm gia vị, đun sôi nhẹ 5 phút.','Rắc hành lá, tắt bếp.']},
+    {id:'m7', category:'man', mealType:'buacom', chay:false, region:null, name:'Thịt rang cháy cạnh', time:20, ingredients:['thịt ba chỉ','nước mắm','đường'], steps:['Thịt ba chỉ cắt miếng vừa ăn, ướp nước mắm, tiêu 15 phút.','Cho thịt vào chảo không dầu (mỡ tự ra), rang lửa vừa.','Rang đến khi thịt săn vàng, cháy cạnh nhẹ.','Nêm thêm chút đường, nước mắm cho đậm, đảo đều đến khi khô nước.']},
+    {id:'m8', category:'man', mealType:'buacom', chay:false, region:null, name:'Cá chiên sốt cà', time:20, ingredients:['cá','cà chua','hành'], steps:['Cá làm sạch, khía nhẹ, ướp muối tiêu, chiên vàng hai mặt, vớt ra.','Cà chua, hành băm nhỏ.','Phi thơm hành, xào cà chua nhuyễn.','Cho cá vào, thêm chút nước, rim nhỏ lửa 5-7 phút cho ngấm sốt.','Nêm gia vị vừa ăn, tắt bếp.']},
+    {id:'m9', category:'man', mealType:'buacom', chay:false, region:null, name:'Sườn xào chua ngọt', time:30, ingredients:['sườn non','cà chua','dứa'], steps:['Sườn non chặt miếng, chần sơ, rửa sạch, ướp gia vị 15 phút.','Chiên sườn vàng đều, vớt ra.','Phi thơm tỏi, cho cà chua, dứa vào xào.','Pha nước sốt chua ngọt (giấm, đường, nước mắm, tương cà), đổ vào đun sôi.','Cho sườn vào đảo đều đến khi nước sốt sánh bám đều, tắt bếp.']},
+    {id:'m10', category:'man', mealType:'buacom', chay:false, region:null, name:'Trứng chiên thịt bằm', time:10, ingredients:['trứng','thịt bằm','hành lá'], steps:['Thịt bằm ướp sơ với chút gia vị.','Đánh tan trứng, trộn thịt bằm và hành lá thái nhỏ vào.','Nêm gia vị vừa ăn.','Đổ hỗn hợp vào chảo dầu nóng, chiên vàng đều hai mặt lửa vừa.']},
+    {id:'m11', category:'man', mealType:'buacom', chay:false, region:null, name:'Gà chiên nước mắm', time:25, ingredients:['gà','nước mắm','tỏi'], steps:['Gà chặt miếng vừa ăn, ướp chút muối, chiên vàng giòn, vớt ra.','Pha nước mắm với đường theo tỷ lệ 1:1, đun cho sánh kẹo lại.','Phi thơm tỏi băm, đổ nước mắm đường vào.','Cho gà vào đảo đều đến khi nước mắm bám đều, tắt bếp.']},
+    {id:'m12', category:'man', mealType:'buacom', chay:false, region:null, name:'Mực xào sa tế', time:15, ingredients:['mực','sa tế','hành tây'], steps:['Mực làm sạch, cắt khoanh hoặc khía hoa, ướp sơ.','Hành tây cắt múi cau.','Phi thơm tỏi với sa tế.','Cho mực vào xào lửa lớn nhanh tay 2-3 phút.','Cho hành tây vào đảo đều, nêm gia vị, tắt bếp ngay để mực không dai.']},
+    {id:'m13', category:'man', mealType:'buacom', chay:false, region:null, name:'Thịt bò xào hành tây', time:15, ingredients:['thịt bò','hành tây','tỏi'], steps:['Thịt bò thái mỏng, ướp tỏi băm, dầu hào, tiêu 10 phút.','Hành tây cắt múi cau.','Xào thịt bò lửa lớn nhanh tay đến khi tái thì gắp ra.','Xào sơ hành tây 1 phút, cho thịt bò vào đảo đều.','Nêm gia vị, tắt bếp ngay để thịt không dai.']},
+    {id:'m14', category:'man', mealType:'buacom', chay:false, region:null, name:'Chả trứng hấp', time:20, ingredients:['trứng','thịt bằm','mộc nhĩ'], steps:['Thịt bằm trộn với trứng, mộc nhĩ băm nhỏ, hành lá, gia vị.','Đánh đều hỗn hợp cho mịn.','Đổ vào khuôn hoặc chén sâu lòng.','Hấp cách thủy lửa vừa 20-25 phút đến khi chín, xăm tăm không dính là được.']},
+    {id:'m15', category:'man', mealType:'buacom', chay:false, region:null, name:'Cá basa kho nghệ', time:25, ingredients:['cá basa','nghệ','nước mắm'], steps:['Cá basa cắt khúc, ướp với nghệ tươi giã hoặc bột nghệ, nước mắm 20 phút.','Phi thơm hành tỏi, cho cá vào áp chảo sơ hai mặt.','Thêm chút nước, đun sôi rồi hạ lửa nhỏ.','Kho 15-20 phút đến khi nước sánh lại, nêm vừa ăn.']},
+    {id:'m16', category:'man', mealType:'buacom', chay:false, region:null, name:'Tôm rang thịt', time:20, ingredients:['tôm','thịt ba chỉ','hành'], steps:['Thịt ba chỉ cắt hạt lựu, tôm bóc vỏ.','Phi thơm hành, xào săn thịt ba chỉ trước.','Cho tôm vào xào chung đến khi tôm chín đỏ.','Nêm nước mắm, đường, rang đến khi hơi khô, đậm vị.']},
+    {id:'m17', category:'man', mealType:'buacom', chay:false, region:null, name:'Thịt heo quay', time:60, ingredients:['thịt ba chỉ','ngũ vị hương'], steps:['Thịt ba chỉ luộc sơ, để ráo, xăm da cho đều.','Ướp ngũ vị hương, muối vào phần thịt (tránh dính da), để da khô ráo hoàn toàn.','Nướng hoặc quay lửa vừa cho chín thịt trước, sau đó tăng nhiệt để da phồng giòn.','Quay đến khi da vàng giòn đều, để nguội bớt rồi chặt miếng.']},
+    {id:'m18', category:'man', mealType:'buacom', chay:false, region:null, name:'Đậu hũ nhồi thịt sốt cà', time:25, ingredients:['đậu hũ','thịt bằm','cà chua'], steps:['Đậu hũ cắt miếng, khoét giữa nhẹ. Thịt bằm trộn gia vị làm nhân.','Nhồi thịt vào đậu hũ, chiên sơ mặt có nhân cho săn.','Cà chua băm nhuyễn, phi thơm hành rồi xào cà chua.','Cho đậu hũ vào, thêm chút nước, rim nhỏ lửa 10 phút đến khi thịt chín và sốt sánh.','Nêm gia vị, rắc hành lá, tắt bếp.']},
+    {id:'m19', category:'man', mealType:'buacom', chay:true, region:null, name:'Đậu hũ kho tiêu chay', time:20, ingredients:['đậu hũ','tiêu','nước tương','đường'], steps:['Đậu hũ cắt miếng vuông, chiên sơ cho săn mặt ngoài.','Thắng nước màu bằng đường, cho đậu hũ vào đảo đều.','Thêm nước tương và chút nước, đun sôi rồi hạ lửa nhỏ.','Kho 10-12 phút đến khi nước sánh lại, rắc tiêu, tắt bếp.']},
+    {id:'m20', category:'man', mealType:'buacom', chay:true, region:null, name:'Nấm kho tiêu chay', time:20, ingredients:['nấm đông cô','nấm rơm','tiêu','nước tương'], steps:['Nấm đông cô, nấm rơm rửa sạch, để ráo, cắt miếng vừa ăn.','Phi thơm hành, cho nấm vào xào săn.','Thêm nước tương, chút đường, đổ nước xâm xấp.','Kho lửa nhỏ 10-12 phút đến khi nước sánh lại, rắc tiêu, tắt bếp.']},
+    {id:'m21', category:'man', mealType:'buacom', chay:true, region:null, name:'Tàu hũ ky chiên giòn sốt me chay', time:20, ingredients:['tàu hũ ky','me','đường','nước tương'], steps:['Tàu hũ ky chiên vàng giòn, vớt ra để ráo dầu.','Dầm me lấy nước cốt, lọc bỏ hạt.','Đun nước me với đường, nước tương đến khi sánh lại làm sốt.','Rưới sốt me lên tàu hũ ky, dùng ngay khi còn giòn.']},
+
+    // Bữa 1 tô (Kiểu bữa ăn riêng — xem ADR-0002)
+    {id:'t1', category:null, mealType:'buatomonuoc', chay:false, region:'bac', name:'Phở bò', time:60, ingredients:['bánh phở','thịt bò','xương bò','hành tây','gừng','quế hồi'], steps:['Xương bò chần qua nước sôi, rửa sạch.','Nướng gừng và hành tây cho thơm, cho vào nồi ninh cùng xương 3-4 tiếng, vớt bọt thường xuyên.','Cho quế, hồi, thảo quả vào túi vải, thả vào nồi nước dùng ninh cùng 30 phút cuối.','Nêm nước mắm, muối cho vừa vị, lọc lại nước dùng cho trong.','Trụng bánh phở, xếp thịt bò thái mỏng lên trên, chan nước dùng đang sôi, rắc hành ngò.']},
+    {id:'t2', category:null, mealType:'buatomonuoc', chay:false, region:'bac', name:'Phở gà', time:45, ingredients:['bánh phở','gà','hành tây','gừng'], steps:['Gà làm sạch, luộc chín cùng gừng và hành tây nướng thơm, vớt bọt.','Vớt gà ra, xé hoặc thái miếng vừa ăn.','Nêm nước luộc gà với nước mắm, muối cho vừa vị làm nước dùng.','Trụng bánh phở, xếp thịt gà lên trên, chan nước dùng nóng, rắc hành ngò.']},
+    {id:'t3', category:null, mealType:'buatomonuoc', chay:false, region:'trung', name:'Bún bò Huế', time:75, ingredients:['bún','thịt bò','giò heo','sả','mắm ruốc'], steps:['Giò heo và xương bò chần qua nước sôi, rửa sạch.','Ninh xương và giò heo với sả đập dập trong 2-3 tiếng, vớt bọt.','Pha mắm ruốc với nước, lọc cặn, cho vào nồi nước dùng.','Nêm nước mắm, đường, ớt sa tế cho vừa vị đậm đà đặc trưng.','Trụng bún, xếp thịt bò, giò heo lên trên, chan nước dùng, ăn kèm rau sống.']},
+    {id:'t4', category:null, mealType:'buatomonuoc', chay:false, region:null, name:'Bún riêu cua', time:50, ingredients:['bún','cua đồng','cà chua','đậu hũ','me'], steps:['Cua đồng giã hoặc xay, lọc lấy nước, bỏ xác.','Đun nước cua trên lửa vừa đến khi riêu cua nổi lên, vớt riêng ra.','Phi thơm cà chua làm màu, đổ vào nồi nước dùng cùng nước me chua nhẹ.','Đậu hũ chiên vàng, cắt miếng, cho vào nồi cùng riêu cua.','Trụng bún, chan nước dùng, ăn kèm rau sống.']},
+    {id:'t5', category:null, mealType:'buatomonuoc', chay:false, region:'nam', name:'Hủ tiếu Nam Vang', time:45, ingredients:['hủ tiếu','thịt bằm','tôm','xương heo'], steps:['Xương heo ninh lấy nước dùng, vớt bọt.','Tôm luộc chín, bóc vỏ. Thịt bằm xào chín, tơi.','Nêm nước dùng với nước mắm, muối, đường cho vừa vị.','Trụng hủ tiếu, xếp tôm, thịt bằm lên trên, chan nước dùng, rắc hành phi.']},
+    {id:'t6', category:null, mealType:'buatomonuoc', chay:false, region:null, name:'Nui xào bò', time:20, ingredients:['nui','thịt bò','cà chua','hành tây'], steps:['Nui luộc chín tới, xả nước lạnh, để ráo.','Thịt bò thái mỏng, ướp tỏi, tiêu 10 phút.','Xào thịt bò lửa lớn đến tái, gắp ra.','Xào cà chua, hành tây cho ra nước sốt, cho nui vào đảo đều.','Cho thịt bò lại vào, nêm gia vị, đảo đều, tắt bếp.']},
+    {id:'t7', category:null, mealType:'buatomonuoc', chay:true, region:null, name:'Bún chay nấm', time:30, ingredients:['bún','nấm','đậu hũ','cà rốt','rau cải'], steps:['Nấm, đậu hũ, cà rốt sơ chế, cắt miếng vừa ăn.','Đun nước dùng chay từ nấm và rau củ trong 30 phút.','Đậu hũ chiên vàng, cho vào nồi nước dùng cùng nấm.','Nêm nước tương, muối cho vừa vị.','Trụng bún, chan nước dùng, thêm rau cải, dùng nóng.']},
+    {id:'t8', category:null, mealType:'buatomonuoc', chay:true, region:'bac', name:'Phở chay', time:40, ingredients:['bánh phở','đậu hũ','nấm','củ cải','hành tây'], steps:['Củ cải, hành tây nướng thơm cho vào nồi nước ninh cùng nấm hương 1 tiếng lấy vị ngọt.','Đậu hũ chiên vàng, cắt miếng.','Nêm nước dùng với nước tương, muối cho vừa vị.','Trụng bánh phở, xếp đậu hũ và nấm lên trên, chan nước dùng, rắc hành ngò.']},
+    {id:'t9', category:null, mealType:'buatomonuoc', chay:false, region:null, name:'Bún chả', time:35, ingredients:['bún','thịt ba chỉ','thịt bằm','nước mắm chấm'], steps:['Thịt ba chỉ thái lát, thịt bằm viên tròn dẹt, ướp gia vị 20 phút.','Nướng thịt trên than hoa hoặc chảo đến chín vàng thơm.','Pha nước mắm chấm chua ngọt, thả thịt nướng vào.','Trụng bún, ăn kèm bún, rau sống và nước mắm chấm có thịt.']}
   ];
 
-  var LS_KEYS = { dishes:'hnng_dishes_v1', history:'hnng_history_v1', favorites:'hnng_favorites_v1', today:'hnng_todaymenu_v1', shop:'hnng_shopcheck_v1', seedVer:'hnng_seedver_v1' };
-  var SEED_VERSION = 2; // bump when SEED_DISHES content (e.g. steps) changes, to backfill saved dishes
+  var LS_KEYS = { dishes:'hnng_dishes_v1', history:'hnng_history_v1', favorites:'hnng_favorites_v1', today:'hnng_todaymenu_v1', shop:'hnng_shopcheck_v1', seedVer:'hnng_seedver_v1', chayFilter:'hnng_chayfilter_v1' };
+  var SEED_VERSION = 3; // bump when SEED_DISHES content (e.g. steps, chay/region/mealType) changes, to backfill saved dishes
 
   function safeGet(key, fallback){
     try{ var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
@@ -541,24 +605,34 @@
     dishes: safeGet(LS_KEYS.dishes, null) || SEED_DISHES.slice(),
     history: safeGet(LS_KEYS.history, []),
     favorites: safeGet(LS_KEYS.favorites, []),
-    todayMenu: safeGet(LS_KEYS.today, null), // {dishIds:[..], date}
+    todayMenu: safeGet(LS_KEYS.today, null), // {dishIds:[..], date, mealType}
     shopChecked: safeGet(LS_KEYS.shop, {}),
+    chayFilter: safeGet(LS_KEYS.chayFilter, false),
     activeTab: 'today',
     catFilter: 'all',
+    mgmtChayFilter: false,
     editingDishId: null
   };
   if(!state.dishes.length){ state.dishes = SEED_DISHES.slice(); }
 
-  // Backfill recipe steps (and any other new seed fields) into dishes saved by an older
-  // version of the app, without touching names/ingredients the user already edited.
+  // Backfill recipe steps + new fields (mealType/chay/region) into dishes saved by an older
+  // version of the app, without touching names/ingredients the user already edited — and add
+  // brand-new seed dishes (Bữa 1 tô, món chay bổ sung...) that an older saved list doesn't have yet.
   var storedSeedVer = safeGet(LS_KEYS.seedVer, 1);
   if(storedSeedVer < SEED_VERSION){
     var seedMap = {};
     SEED_DISHES.forEach(function(sd){ seedMap[sd.id] = sd; });
+    var existingIds = {};
     state.dishes.forEach(function(d){
-      if((!d.steps || !d.steps.length) && seedMap[d.id] && seedMap[d.id].steps){
-        d.steps = seedMap[d.id].steps.slice();
-      }
+      existingIds[d.id] = true;
+      var sd = seedMap[d.id];
+      if((!d.steps || !d.steps.length) && sd && sd.steps){ d.steps = sd.steps.slice(); }
+      if(d.mealType === undefined){ d.mealType = 'buacom'; }
+      if(d.chay === undefined){ d.chay = sd ? !!sd.chay : false; }
+      if(d.region === undefined){ d.region = sd ? sd.region : null; }
+    });
+    SEED_DISHES.forEach(function(sd){
+      if(!existingIds[sd.id]){ state.dishes.push(Object.assign({}, sd)); }
     });
   }
   safeSet(LS_KEYS.dishes, state.dishes);
@@ -586,20 +660,23 @@
     return ids;
   }
 
-  function pickRandom(category, excludeId){
-    var pool = state.dishes.filter(function(d){ return d.category === category; });
-    if(!pool.length) return null;
-    var avoid = recentIds(4);
-    var fresh = pool.filter(function(d){ return !avoid[d.id] && d.id !== excludeId; });
-    var candidates = fresh.length ? fresh : pool.filter(function(d){ return d.id !== excludeId; });
-    if(!candidates.length) candidates = pool;
-    return candidates[Math.floor(Math.random()*candidates.length)];
+  function avoidIdsForCategory(excludeId){
+    var ids = Object.keys(recentIds(4));
+    if(excludeId) ids.push(excludeId);
+    return ids;
   }
 
   function randomizeAll(){
-    var picks = CAT_ORDER.map(function(cat){ return pickRandom(cat); }).filter(Boolean);
-    state.todayMenu = { dishIds: picks.map(function(d){ return d.id; }), date: todayStr() };
+    var avoidByCategory = {};
+    CAT_ORDER.forEach(function(cat){ avoidByCategory[cat] = avoidIdsForCategory(); });
+    var menu = buildBuaComMenu(state.dishes, { chay: state.chayFilter, avoidIdsByCategory: avoidByCategory });
+    var missing = CAT_ORDER.filter(function(cat){ return !menu[cat]; });
+    var picks = CAT_ORDER.map(function(cat){ return menu[cat]; }).filter(Boolean);
+    state.todayMenu = { dishIds: picks.map(function(d){ return d.id; }), date: todayStr(), mealType: 'buacom' };
     state.shopChecked = {};
+    if(missing.length){
+      showToast('Chưa đủ món chay cho nhóm: ' + missing.map(function(c){ return CAT[c]; }).join(', '));
+    }
     safeSet(LS_KEYS.today, state.todayMenu);
     safeSet(LS_KEYS.shop, state.shopChecked);
     track('random_menu');
@@ -607,16 +684,51 @@
   }
 
   function rerollSlot(category){
-    if(!state.todayMenu) return randomizeAll();
+    if(!state.todayMenu || state.todayMenu.mealType !== 'buacom') return randomizeAll();
     var currentIds = state.todayMenu.dishIds.slice();
     var currentInCat = currentIds.map(dishById).find(function(d){ return d && d.category === category; });
-    var next = pickRandom(category, currentInCat ? currentInCat.id : null);
-    if(!next) return;
+    var pool = filterDishes(state.dishes, { mealType:'buacom', category: category, chay: state.chayFilter });
+    var next = pickRandom(pool, avoidIdsForCategory(currentInCat ? currentInCat.id : null));
+    if(!next){ showToast('Không còn món khác trong nhóm này'); return; }
     var otherIds = currentIds.filter(function(id){ var d = dishById(id); return !d || d.category !== category; });
     state.todayMenu.dishIds = otherIds.concat([next.id]);
     safeSet(LS_KEYS.today, state.todayMenu);
     track('reroll_dish', {category: category});
     renderToday();
+  }
+
+  function randomizeMonNuoc(){
+    var picked = pickMonNuoc(state.dishes, { chay: state.chayFilter });
+    if(!picked){ showToast('Chưa có món Bữa 1 tô nào phù hợp'); return; }
+    state.todayMenu = { dishIds: [picked.id], date: todayStr(), mealType: 'buatomonuoc' };
+    state.shopChecked = {};
+    safeSet(LS_KEYS.today, state.todayMenu);
+    safeSet(LS_KEYS.shop, state.shopChecked);
+    track('random_monnuoc');
+    renderToday();
+  }
+
+  function rerollMonNuoc(){
+    if(!state.todayMenu || state.todayMenu.mealType !== 'buatomonuoc') return;
+    var currentId = state.todayMenu.dishIds[0];
+    var next = pickMonNuoc(state.dishes, { chay: state.chayFilter, avoidId: currentId });
+    if(!next){ showToast('Không còn món Bữa 1 tô khác'); return; }
+    state.todayMenu.dishIds = [next.id];
+    safeSet(LS_KEYS.today, state.todayMenu);
+    track('reroll_dish', {category: 'buatomonuoc'});
+    renderToday();
+  }
+
+  function switchToBuaCom(){
+    randomizeAll();
+  }
+
+  function toggleChayFilter(){
+    state.chayFilter = !state.chayFilter;
+    safeSet(LS_KEYS.chayFilter, state.chayFilter);
+    track('toggle_chay', {on: state.chayFilter});
+    if(state.todayMenu && state.todayMenu.mealType === 'buatomonuoc'){ randomizeMonNuoc(); }
+    else { randomizeAll(); }
   }
 
   function showToast(msg){
@@ -631,8 +743,8 @@
     if(!state.todayMenu) return;
     var d = todayStr();
     var existing = state.history.find(function(h){ return h.date === d; });
-    if(existing){ existing.dishIds = state.todayMenu.dishIds; }
-    else{ state.history.unshift({date:d, dishIds: state.todayMenu.dishIds}); }
+    if(existing){ existing.dishIds = state.todayMenu.dishIds; existing.mealType = state.todayMenu.mealType; }
+    else{ state.history.unshift({date:d, dishIds: state.todayMenu.dishIds, mealType: state.todayMenu.mealType}); }
     state.history = state.history.slice(0, 60);
     safeSet(LS_KEYS.history, state.history);
     track('mark_cooked');
@@ -645,24 +757,27 @@
 
     var menuList = document.getElementById('menuList');
     if(!state.todayMenu){
+      renderMealControls();
       menuList.innerHTML = '<div class="card empty">Bấm "Random thực đơn" để bắt đầu nhé!</div>';
       document.getElementById('shoppingCard').innerHTML = '<div class="empty">Chưa có món nào.</div>';
       document.getElementById('cookedBanner').innerHTML = '';
       renderHistory();
       return;
     }
+    renderMealControls();
+
     var dishes = state.todayMenu.dishIds.map(dishById).filter(Boolean);
     menuList.innerHTML = dishes.map(function(d){
       return '<div class="card dish-slot">' +
         '<div style="min-width:0">' +
-          '<span class="cat-tag">' + CAT[d.category] + '</span>' +
+          '<span class="cat-tag">' + (d.mealType === 'buatomonuoc' ? 'Bữa 1 tô' : CAT[d.category]) + dishBadges(d) + '</span>' +
           '<div class="dish-name">' + escapeHtml(d.name) + '</div>' +
           '<div class="dish-meta">' + (d.time ? d.time + ' phút · ' : '') + d.ingredients.length + ' nguyên liệu</div>' +
           '<div class="dish-ingr">' + d.ingredients.map(escapeHtml).join(', ') + '</div>' +
           renderRecipe(d) +
         '</div>' +
         '<div class="slot-actions">' +
-          '<button class="icon-btn" data-reroll="' + d.category + '" title="Đổi món khác">⟲</button>' +
+          '<button class="icon-btn" data-reroll="' + (d.mealType === 'buatomonuoc' ? 'buatomonuoc' : d.category) + '" title="Đổi món khác">⟲</button>' +
         '</div>' +
       '</div>';
     }).join('');
@@ -710,7 +825,8 @@
     if(!recent.length){ card.innerHTML = '<div class="empty">Chưa có lịch sử nấu ăn.</div>'; return; }
     card.innerHTML = recent.map(function(h){
       var names = h.dishIds.map(function(id){ var d = dishById(id); return d ? d.name : '(đã xoá)'; }).join(' · ');
-      return '<div class="history-row"><span class="h-date">' + fmtDate(h.date) + '</span><span class="h-dishes">' + escapeHtml(names) + '</span></div>';
+      var prefix = h.mealType === 'buatomonuoc' ? '🍜 ' : '';
+      return '<div class="history-row"><span class="h-date">' + fmtDate(h.date) + '</span><span class="h-dishes">' + prefix + escapeHtml(names) + '</span></div>';
     }).join('');
   }
 
@@ -727,23 +843,53 @@
     '</details>';
   }
 
+  function dishBadges(d){
+    var badges = '';
+    if(d.chay) badges += '<span class="badge badge-chay">Chay</span>';
+    if(d.region && REGION[d.region]) badges += '<span class="badge badge-region">' + REGION[d.region] + '</span>';
+    return badges ? '<span class="badge-row">' + badges + '</span>' : '';
+  }
+
+  function renderMealControls(){
+    var isMonNuoc = state.todayMenu && state.todayMenu.mealType === 'buatomonuoc';
+    var chips = [
+      '<button class="chip' + (state.chayFilter ? ' active' : '') + '" id="btnToggleChay">' + (state.chayFilter ? '✓ ' : '') + 'Ăn chay hôm nay</button>'
+    ];
+    if(isMonNuoc){
+      chips.push('<button class="chip active" id="btnToggleMealType">🍜 Đang ăn 1 tô — bấm để quay lại cơm</button>');
+    } else {
+      chips.push('<button class="chip" id="btnToggleMealType">🍜 Ăn 1 tô hôm nay</button>');
+    }
+    document.getElementById('mealControls').innerHTML = chips.join('');
+  }
+
   // ---- Dishes management ----
   function renderDishes(){
     var filterRow = document.getElementById('catFilter');
-    var cats = [['all','Tất cả']].concat(CAT_ORDER.map(function(c){ return [c, CAT[c]]; }));
+    var cats = [['all','Tất cả']].concat(CAT_ORDER.map(function(c){ return [c, CAT[c]]; })).concat([['buatomonuoc','Bữa 1 tô']]);
     filterRow.innerHTML = cats.map(function(c){
       return '<button class="chip' + (state.catFilter===c[0]?' active':'') + '" data-cat="' + c[0] + '">' + c[1] + '</button>';
-    }).join('');
+    }).join('') + '<button class="chip' + (state.mgmtChayFilter?' active':'') + '" id="btnMgmtChayFilter">Chay</button>';
 
     var listCard = document.getElementById('dishListCard');
-    var list = state.dishes.filter(function(d){ return state.catFilter==='all' || d.category===state.catFilter; });
-    list.sort(function(a,b){ return a.category.localeCompare(b.category) || a.name.localeCompare(b.name,'vi'); });
+    var list = state.dishes.filter(function(d){
+      if(state.mgmtChayFilter && !d.chay) return false;
+      if(state.catFilter === 'all') return true;
+      if(state.catFilter === 'buatomonuoc') return d.mealType === 'buatomonuoc';
+      return d.mealType !== 'buatomonuoc' && d.category === state.catFilter;
+    });
+    list.sort(function(a,b){
+      var ca = a.mealType === 'buatomonuoc' ? 'zzz' : a.category;
+      var cb = b.mealType === 'buatomonuoc' ? 'zzz' : b.category;
+      return ca.localeCompare(cb) || a.name.localeCompare(b.name,'vi');
+    });
     if(!list.length){ listCard.innerHTML = '<div class="empty">Không có món nào.</div>'; return; }
     listCard.innerHTML = list.map(function(d){
+      var catLabel = d.mealType === 'buatomonuoc' ? 'Bữa 1 tô' : CAT[d.category];
       return '<div class="dish-row">' +
         '<div class="info">' +
-          '<div class="dname">' + escapeHtml(d.name) + '</div>' +
-          '<div class="dmeta">' + CAT[d.category] + (d.time ? ' · ' + d.time + ' phút' : '') + ' · ' + d.ingredients.join(', ') + '</div>' +
+          '<div class="dname">' + escapeHtml(d.name) + dishBadges(d) + '</div>' +
+          '<div class="dmeta">' + catLabel + (d.time ? ' · ' + d.time + ' phút' : '') + ' · ' + d.ingredients.join(', ') + '</div>' +
         '</div>' +
         '<div class="actions">' +
           '<button class="icon-btn" data-edit="' + d.id + '" title="Sửa">✎</button>' +
@@ -754,14 +900,23 @@
     }).join('');
   }
 
+  function updateCategoryVisibility(){
+    var isMonNuoc = document.getElementById('fMealType').value === 'buatomonuoc';
+    document.getElementById('fCategoryWrap').hidden = isMonNuoc;
+  }
+
   function openDishForm(dish){
     state.editingDishId = dish ? dish.id : null;
     document.getElementById('dishFormTitle').textContent = dish ? 'Sửa món' : 'Thêm món mới';
     document.getElementById('fName').value = dish ? dish.name : '';
-    document.getElementById('fCategory').value = dish ? dish.category : 'xao';
+    document.getElementById('fMealType').value = dish && dish.mealType === 'buatomonuoc' ? 'buatomonuoc' : 'buacom';
+    document.getElementById('fCategory').value = dish && dish.category ? dish.category : 'xao';
     document.getElementById('fTime').value = dish && dish.time ? dish.time : '';
+    document.getElementById('fRegion').value = dish && dish.region ? dish.region : '';
+    document.getElementById('fChay').checked = !!(dish && dish.chay);
     document.getElementById('fIngredients').value = dish ? dish.ingredients.join(', ') : '';
     document.getElementById('fSteps').value = dish && dish.steps ? dish.steps.join('\n') : '';
+    updateCategoryVisibility();
     document.getElementById('dishModalBackdrop').hidden = false;
   }
   function closeDishForm(){ document.getElementById('dishModalBackdrop').hidden = true; }
@@ -770,17 +925,20 @@
     e.preventDefault();
     var name = document.getElementById('fName').value.trim();
     if(!name) return;
-    var category = document.getElementById('fCategory').value;
+    var mealType = document.getElementById('fMealType').value;
+    var category = mealType === 'buatomonuoc' ? null : document.getElementById('fCategory').value;
     var time = parseInt(document.getElementById('fTime').value, 10) || null;
+    var region = document.getElementById('fRegion').value || null;
+    var chay = document.getElementById('fChay').checked;
     var ingredients = document.getElementById('fIngredients').value.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
     var steps = document.getElementById('fSteps').value.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
     if(state.editingDishId){
       var d = dishById(state.editingDishId);
-      if(d){ d.name = name; d.category = category; d.time = time; d.ingredients = ingredients; d.steps = steps; }
-      track('edit_dish', {category: category});
+      if(d){ d.name = name; d.mealType = mealType; d.category = category; d.time = time; d.region = region; d.chay = chay; d.ingredients = ingredients; d.steps = steps; }
+      track('edit_dish', {category: category || 'buatomonuoc'});
     } else {
-      state.dishes.push({ id: uid(), name:name, category:category, time:time, ingredients:ingredients, steps:steps });
-      track('add_dish', {category: category});
+      state.dishes.push({ id: uid(), name:name, mealType:mealType, category:category, time:time, region:region, chay:chay, ingredients:ingredients, steps:steps });
+      track('add_dish', {category: category || 'buatomonuoc'});
     }
     safeSet(LS_KEYS.dishes, state.dishes);
     closeDishForm();
@@ -835,10 +993,21 @@
   document.getElementById('btnAddDish').addEventListener('click', function(){ openDishForm(null); });
   document.getElementById('fCancel').addEventListener('click', closeDishForm);
   document.getElementById('dishForm').addEventListener('submit', saveDishForm);
+  document.getElementById('fMealType').addEventListener('change', updateCategoryVisibility);
 
   document.getElementById('menuList').addEventListener('click', function(e){
     var btn = e.target.closest('[data-reroll]');
-    if(btn) rerollSlot(btn.dataset.reroll);
+    if(!btn) return;
+    if(btn.dataset.reroll === 'buatomonuoc') rerollMonNuoc();
+    else rerollSlot(btn.dataset.reroll);
+  });
+
+  document.getElementById('mealControls').addEventListener('click', function(e){
+    if(e.target.closest('#btnToggleChay')) toggleChayFilter();
+    if(e.target.closest('#btnToggleMealType')){
+      if(state.todayMenu && state.todayMenu.mealType === 'buatomonuoc') switchToBuaCom();
+      else randomizeMonNuoc();
+    }
   });
 
   document.getElementById('shoppingCard').addEventListener('change', function(e){
@@ -852,9 +1021,8 @@
 
   document.getElementById('catFilter').addEventListener('click', function(e){
     var chip = e.target.closest('[data-cat]');
-    if(!chip) return;
-    state.catFilter = chip.dataset.cat;
-    renderDishes();
+    if(chip){ state.catFilter = chip.dataset.cat; renderDishes(); return; }
+    if(e.target.closest('#btnMgmtChayFilter')){ state.mgmtChayFilter = !state.mgmtChayFilter; renderDishes(); }
   });
 
   document.getElementById('dishListCard').addEventListener('click', function(e){

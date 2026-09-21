@@ -12,6 +12,15 @@ Mở trực tiếp `index.html` bằng trình duyệt, hoặc chạy một stati
 npx serve .
 ```
 
+## Chạy test
+
+Logic chọn/lọc món (`logic.js`) có bộ test riêng, không cần trình duyệt:
+
+```bash
+npm install
+npm test
+```
+
 ## Deploy lên Vercel
 
 ```bash

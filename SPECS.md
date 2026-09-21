@@ -20,9 +20,10 @@ Trợ lý thực đơn cho một gia đình. Mỗi ngày gợi ý ngẫu nhiên 
 
 ## 2. Kiến trúc & công nghệ
 
-- **Không framework** — 1 file `index.html` duy nhất chứa HTML/CSS/JS thuần (vanilla), không build step, không dependency ngoài font Google Fonts (Fraunces + Be Vietnam Pro) load qua `@import`.
-- **Không backend, không database** — toàn bộ state lưu trong `localStorage` của trình duyệt, theo từng thiết bị/trình duyệt riêng biệt (không đồng bộ nhiều thiết bị).
+- **Không framework** — `index.html` (HTML/CSS/JS thuần) + `logic.js` (module ES thuần, chứa toàn bộ logic chọn/lọc món — xem §4a), không build step khi chạy production, không dependency ngoài font Google Fonts (Fraunces + Be Vietnam Pro) load qua `@import`.
+- **Không backend, không database** — toàn bộ state lưu trong `localStorage` của trình duyệt, theo từng thiết bị/trình duyệt riêng biệt (không đồng bộ nhiều thiết bị) — đến trước khi Phase 2 hoàn thành.
 - **Hosting**: Vercel (static hosting, không cần build command).
+- **Testing**: Vitest (dev dependency, `package.json`) test trực tiếp `logic.js` — không cần trình duyệt/DOM. Chạy `npm test`.
 - **Nguồn dữ liệu món ăn ban đầu**: tổng hợp qua tra cứu web (WebSearch) các món ăn gia đình Việt Nam phổ biến, biên soạn lại thành dữ liệu có cấu trúc.
 
 ## 3. Mô hình dữ liệu
@@ -116,11 +117,11 @@ hom-nay-nau-gi/
 - Nguyên liệu chỉ liệt kê tên, chưa có định lượng (vd. "200g thịt ba chỉ").
 - Chưa có tính năng lọc theo số người ăn, ngân sách, hoặc nguyên liệu có sẵn trong tủ lạnh.
 
-## 9. Roadmap tiếp theo (đã grill với `/mattpocock-skills:grill-with-docs`, 2026-09-21 — chưa triển khai)
+## 9. Roadmap tiếp theo (đã grill với `/mattpocock-skills:grill-with-docs`, 2026-09-21)
 
-Xem thuật ngữ đầy đủ tại [CONTEXT.md](CONTEXT.md), quyết định kiến trúc tại [docs/adr/](docs/adr/).
+Xem thuật ngữ đầy đủ tại [CONTEXT.md](CONTEXT.md), quyết định kiến trúc tại [docs/adr/](docs/adr/). Spec chi tiết + user stories: [docs/spec-phase1-chay-buatomonuoc-vungmien.md](docs/spec-phase1-chay-buatomonuoc-vungmien.md), issue [#1](https://github.com/nhson/hom-nay-nau-gi/issues/1).
 
-**Phase 1 — làm sớm nhất (không phụ thuộc kỹ thuật vào 2 phase sau):**
+**✅ Phase 1 — đã triển khai (2026-09-21):**
 - **Chay**: thêm tag `chay` lên món ăn (món có sẵn phù hợp + món chay mới), thêm bộ lọc "ăn chay hôm nay" áp dụng cho cả 3 Nhóm món — không phải nhóm thứ 4. Áp dụng được cho từng ngày riêng lẻ trong Kế hoạch tuần (Phase 3), không chỉ "Hôm nay". Tab "Món ăn" có thêm chip lọc "Chay" (ngang hàng Tất cả/Xào.../Canh/Món mặn) để duyệt toàn bộ món chay bất cứ lúc nào.
 - **Bữa 1 tô**: Kiểu bữa ăn mới song song "Bữa cơm 3 món" — món nước ăn độc lập (phở/bún/nui...), kích hoạt bằng nút riêng chủ động (không random tự động). Xem [ADR-0002](docs/adr/0002-meal-type-vs-category.md).
 - **Vùng miền**: tag Bắc/Trung/Nam trên món ăn, chỉ hiển thị thông tin, chưa dùng để lọc.
