@@ -130,7 +130,7 @@ Xem thuật ngữ đầy đủ tại [CONTEXT.md](CONTEXT.md), quyết định k
 - Không có tài khoản cá nhân — 1 hộ gia đình = 1 bản ghi, truy cập qua link/mã không đoán được (`/h/<mã>`).
 - Không đồng bộ real-time giữa các phiên, không xử lý xung đột — đọc khi mở app, ghi đè khi có thay đổi. Xem [ADR-0001](docs/adr/0001-centralized-storage-no-session-sync.md).
 
-**Phase 3 — Lịch thực đơn theo tuần:**
+**⏸️ Phase 3 — Lịch thực đơn theo tuần (tạm ngưng, 2026-09-21):**
 - Lên kế hoạch trước cho cả 7 ngày (Bữa cơm 3 món), ép không trùng món tuyệt đối trong tuần (đủ dữ liệu vì 18 món/nhóm > 7 ngày cần).
 - Gộp danh sách đi chợ cho cả tuần (giá trị chính của việc lên kế hoạch trước).
 - Sửa được từng ngày riêng lẻ trong tuần — kể cả đổi kiểu bữa ăn của ngày đó sang "Bữa 1 món", hoặc bật lọc "chay" riêng cho ngày đó.
