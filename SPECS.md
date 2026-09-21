@@ -109,6 +109,15 @@ hom-nay-nau-gi/
 12. Cài đặt GitHub App "Vercel", cấp quyền truy cập repo (người dùng tự thực hiện).
 13. Kết nối repo GitHub với Vercel project (`vercel git connect`) → bật CI/CD.
 14. Xác minh CI/CD hoạt động: push 1 commit test lên `main`, Vercel tự tạo deployment mới và Ready sau ~17 giây.
+15. Tạo `SPECS.md` tổng hợp đặc tả kỹ thuật ban đầu (kiến trúc, mô hình dữ liệu, tính năng, hạn chế, roadmap sơ bộ).
+16. Thêm Vercel Web Analytics + custom event tracking (hàm `track()` gắn vào các hành động chính); gặp bug nền tảng Vercel (script insights 404 kéo dài) — xác minh qua API là cấu hình đúng phía Vercel, không phải lỗi code, rồi chờ nền tảng tự khắc phục.
+17. Grill toàn bộ roadmap tiếp theo (`/mattpocock-skills:grill-with-docs`) — chốt 3 phase: (1) Chay/Bữa 1 món/Vùng miền, (2) Backend Hộ gia đình, (3) Lịch thực đơn tuần. Tạo `CONTEXT.md` (glossary) và 2 ADR ([0001](docs/adr/0001-centralized-storage-no-session-sync.md), [0002](docs/adr/0002-meal-type-vs-category.md)).
+18. `/mattpocock-skills:to-spec` cho Phase 1 → publish [issue #1](https://github.com/nhson/hom-nay-nau-gi/issues/1), implement theo TDD: tách `logic.js` làm seam (18 test), mở rộng `SEED_DISHES` 54→73 món (thêm chay, vùng miền, Bữa 1 món), migration `SEED_VERSION` 2→3, UI mới (toggle chay/1 món, badge, filter, form).
+19. `/mattpocock-skills:to-spec` cho Phase 2 → publish [issue #2](https://github.com/nhson/hom-nay-nau-gi/issues/2), implement: seam `household.js` (14 test), API serverless `api/household/[code].js` + Vercel Blob, `vercel.json` rewrite `/h/:code`, tab "Hộ gia đình" (tạo/rời/trạng thái đồng bộ), ghi-qua có debounce.
+20. Thiết lập hạ tầng Vercel Blob (tạo store, kết nối, thêm token) — phát hiện & sửa 2 bug thật khi verify trên production: import path tương đối bị rewrite `/h/:code` bắt nhầm, và nhận diện "hộ trống" sai do message lỗi thật khác dự kiến. Verify end-to-end đa thiết bị (2 "thiết bị" khác nhau thấy đúng cùng 1 dữ liệu) thành công.
+21. Đổi tên nhãn UI cho rõ nghĩa hơn: "Ăn chay hôm nay"→"Món chay", "Ăn 1 tô hôm nay"→"Nấu 1 món" (giữ nguyên nhãn khi bật, chỉ đổi màu highlight thay vì đổi chữ); đổi tên khái niệm "Bữa 1 tô"→"Bữa 1 món" xuyên suốt code và tài liệu.
+22. Sửa bug: đổi món (reroll) làm xáo trộn thứ tự hiển thị 3 món — thêm cơ chế giữ cố định thứ tự Xào→Canh→Món mặn, tự phục hồi cả với dữ liệu cũ đã lệch.
+23. Tạm ẩn tab "Hộ gia đình" khỏi giao diện theo yêu cầu (giữ nguyên code/API phía sau, dễ bật lại). Tạm ngưng Phase 3 trong roadmap.
 
 ## 8. Hạn chế hiện tại
 
